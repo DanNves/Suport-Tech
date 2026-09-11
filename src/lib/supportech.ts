@@ -9,18 +9,9 @@ export const appModules = {
   settings: { label: "Configurações", path: "/configuracoes" },
 } as const;
 
-export const ticketStatuses = [
-  "novo",
-  "atribuido",
-  "em_atendimento",
-  "aguardando_usuario",
-  "resolvido",
-  "fechado",
-] as const;
-
+export const ticketStatuses = ["novo", "atribuido", "em_atendimento", "aguardando_usuario", "resolvido", "fechado"] as const;
 export const ticketPriorities = ["baixa", "media", "alta", "critica"] as const;
-
-export const userRoles = ["solicitante", "tecnico", "gestor", "administrador"] as const;
+export const userRoles = ["admin", "manager", "technician", "agent", "requester", "auditor"] as const;
 
 export type TicketStatus = (typeof ticketStatuses)[number];
 export type TicketPriority = (typeof ticketPriorities)[number];
@@ -28,19 +19,20 @@ export type UserRole = (typeof userRoles)[number];
 
 export interface TicketModel {
   id: string;
-  title: string;
+  ticketNumber: number;
+  subject: string;
   description: string;
   status: TicketStatus;
   priority: TicketPriority;
   requesterId: string;
   assigneeId?: string;
-  categoryId: string;
+  categoryId?: string;
   serviceId?: string;
   assetId?: string;
-  departmentId: string;
   createdAt: string;
   updatedAt: string;
-  dueAt?: string;
+  slaDueAt?: string;
+  firstResponseAt?: string;
   resolvedAt?: string;
   closedAt?: string;
 }
@@ -57,6 +49,7 @@ export interface SupportUserModel {
 export interface TicketCategoryModel {
   id: string;
   name: string;
+  code: string;
   description?: string;
   active: boolean;
 }
@@ -64,9 +57,12 @@ export interface TicketCategoryModel {
 export interface ServiceModel {
   id: string;
   name: string;
-  categoryId: string;
+  code: string;
+  categoryId?: string;
   description?: string;
   defaultPriority: TicketPriority;
+  targetMinutes?: number;
+  requiresAsset: boolean;
   active: boolean;
 }
 
@@ -88,10 +84,6 @@ export interface DepartmentModel {
   active: boolean;
 }
 
-/**
- * Centraliza regras de apresentação. As regras de negócio definitivas
- * serão conectadas ao backend na etapa funcional do domínio de chamados.
- */
 export const ticketStatusLabels: Record<TicketStatus, string> = {
   novo: "Novo",
   atribuido: "Atribuído",
