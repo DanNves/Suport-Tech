@@ -32,6 +32,24 @@ export async function listMyTickets() {
   return data;
 }
 
+export async function getTicket(ticketId: string) {
+  const { data, error } = await supabase.from("tickets").select("*").eq("id", ticketId).single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getTicketHistory(ticketId: string) {
+  const { data, error } = await supabase.from("ticket_history").select("*").eq("ticket_id", ticketId).order("created_at", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function getTicketComments(ticketId: string) {
+  const { data, error } = await supabase.from("ticket_comments").select("*").eq("ticket_id", ticketId).eq("is_internal", false).order("created_at", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
 export async function transitionTicket(ticketId: string, status: "novo" | "atribuido" | "em_atendimento" | "aguardando_usuario" | "resolvido" | "fechado") {
   const { data, error } = await supabase.rpc("transition_ticket", { p_ticket_id: ticketId, p_to_status: status });
   if (error) throw error;
