@@ -1,10 +1,22 @@
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ClipboardList } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { createTicket, listMyTickets, transitionTicket } from "@/lib/supabase/repositories";
 
 export const Route = createFileRoute("/chamados")({ component: ChamadosPage });
 
 function ChamadosPage() {
-  return <AppShell title="Chamados" subtitle="Gerencie solicitações, prioridades e atendimentos de suporte."><Card className="flex min-h-[360px] flex-col items-center justify-center border-border/70 p-8 text-center shadow-sm"><div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary"><ClipboardList className="h-6 w-6" /></div><h2 className="text-lg font-semibold">Central de chamados</h2><p className="mt-1 max-w-md text-sm text-muted-foreground">A estrutura da operação está pronta. O gerenciamento completo de chamados será construído na Fase 2.</p></Card></AppShell>;
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [subject, setSubject] = useState("");
+  const [description, setDescription] = useState("");
+  const [open, setOpen] = useState(false);
+  const load = async () => setTickets((await listMyTickets()) as any[]);
+  useEffect(() => { void load(); }, []);
+  const create = async () => { await createTicket({ subject, description }); setSubject(""); setDescription(""); setOpen(false); await load(); };
+  return <AppShell title="Chamados" subtitle="Gerencie solicitações, prioridades e atendimentos de suporte."><div className="space-y-5"><div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">Central de chamados</h2><p className="text-sm text-muted-foreground">Abertura e acompanhamento conectados ao Supabase.</p></div><div className="flex gap-2"><Button variant="outline" onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />Atualizar</Button><Button onClick={() => setOpen(!open)}><Plus className="mr-2 h-4 w-4" />Novo chamado</Button></div></div>{open && <Card className="p-5 space-y-3"><Input placeholder="Assunto" value={subject} onChange={e => setSubject(e.target.value)} /><Textarea placeholder="Descreva o problema ou solicitação" value={description} onChange={e => setDescription(e.target.value)} /><Button onClick={() => void create()}>Abrir chamado</Button></Card>}<div className="grid gap-3">{tickets.map(t => <Card key={t.id} className="p-4"><div className="flex items-center justify-between"><div><span className="text-xs font-semibold text-primary">#{t.ticket_number}</span><h3 className="font-semibold">{t.subject}</h3><p className="text-sm text-muted-foreground">{t.status} · {t.priority}</p></div>{t.status === "novo" && <Button size="sm" onClick={() => void transitionTicket(t.id, "em_atendimento").then(load)}>Iniciar atendimento</Button>}{t.status === "em_atendimento" && <Button size="sm" onClick={() => void transitionTicket(t.id, "resolvido").then(load)}>Marcar resolvido</Button>}{t.status === "resolvido" && <Button size="sm" variant="outline" onClick={() => void transitionTicket(t.id, "fechado").then(load)}>Fechar</Button>}</div></Card>)}</div></div></AppShell>;
 }
