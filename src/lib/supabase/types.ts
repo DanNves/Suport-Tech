@@ -1,0 +1,21 @@
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
+export type Database = {
+  public: {
+    Tables: {
+      departments: { Row: { id: string; name: string; code: string; description: string | null; is_active: boolean; created_at: string; updated_at: string }; Insert: Omit<Database['public']['Tables']['departments']['Row'], 'id' | 'created_at' | 'updated_at'> & Partial<Pick<Database['public']['Tables']['departments']['Row'], 'id' | 'created_at' | 'updated_at'>>; Update: Partial<Database['public']['Tables']['departments']['Insert']> };
+      roles: { Row: { id: string; key: 'admin' | 'manager' | 'technician' | 'agent' | 'requester' | 'auditor'; name: string; description: string | null; is_active: boolean; created_at: string }; Insert: Omit<Database['public']['Tables']['roles']['Row'], 'id' | 'created_at'> & Partial<Pick<Database['public']['Tables']['roles']['Row'], 'id' | 'created_at'>>; Update: Partial<Database['public']['Tables']['roles']['Insert']> };
+      profiles: { Row: { id: string; full_name: string; email: string | null; avatar_url: string | null; role_id: string; department_id: string | null; job_title: string | null; phone: string | null; is_active: boolean; last_seen_at: string | null; created_at: string; updated_at: string }; Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at'> & Partial<Pick<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at'>>; Update: Partial<Database['public']['Tables']['profiles']['Insert']> };
+      permissions: { Row: { id: string; key: string; name: string; description: string | null; created_at: string }; Insert: Omit<Database['public']['Tables']['permissions']['Row'], 'id' | 'created_at'> & Partial<Pick<Database['public']['Tables']['permissions']['Row'], 'id' | 'created_at'>>; Update: Partial<Database['public']['Tables']['permissions']['Insert']> };
+      role_permissions: { Row: { role_id: string; permission_id: string }; Insert: Database['public']['Tables']['role_permissions']['Row']; Update: Partial<Database['public']['Tables']['role_permissions']['Row']> };
+      ticket_categories: { Row: { id: string; name: string; code: string; description: string | null; is_active: boolean; created_at: string; updated_at: string }; Insert: Omit<Database['public']['Tables']['ticket_categories']['Row'], 'id' | 'created_at' | 'updated_at'> & Partial<Pick<Database['public']['Tables']['ticket_categories']['Row'], 'id' | 'created_at' | 'updated_at'>>; Update: Partial<Database['public']['Tables']['ticket_categories']['Insert']> };
+      service_catalog: { Row: { id: string; category_id: string | null; name: string; code: string; description: string | null; default_priority: 'baixa' | 'media' | 'alta' | 'critica'; target_minutes: number | null; requires_asset: boolean; is_active: boolean; created_at: string; updated_at: string }; Insert: Omit<Database['public']['Tables']['service_catalog']['Row'], 'id' | 'created_at' | 'updated_at'> & Partial<Pick<Database['public']['Tables']['service_catalog']['Row'], 'id' | 'created_at' | 'updated_at'>>; Update: Partial<Database['public']['Tables']['service_catalog']['Insert']> };
+      app_settings: { Row: { key: string; value: Json; description: string | null; updated_at: string }; Insert: Omit<Database['public']['Tables']['app_settings']['Row'], 'updated_at'> & Partial<Pick<Database['public']['Tables']['app_settings']['Row'], 'updated_at'>>; Update: Partial<Database['public']['Tables']['app_settings']['Insert']> };
+      audit_log: { Row: { id: string; actor_id: string | null; action: string; entity_type: string; entity_id: string | null; metadata: Json; created_at: string }; Insert: Omit<Database['public']['Tables']['audit_log']['Row'], 'id' | 'created_at'> & Partial<Pick<Database['public']['Tables']['audit_log']['Row'], 'id' | 'created_at'>>; Update: Partial<Database['public']['Tables']['audit_log']['Insert']> };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: { user_role: 'admin' | 'manager' | 'technician' | 'agent' | 'requester' | 'auditor'; ticket_status: 'novo' | 'atribuido' | 'em_atendimento' | 'aguardando_usuario' | 'resolvido' | 'fechado'; ticket_priority: 'baixa' | 'media' | 'alta' | 'critica' };
+    CompositeTypes: Record<string, never>;
+  };
+};
