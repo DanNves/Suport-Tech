@@ -1,4 +1,5 @@
 import { supabase } from "./client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export async function getActiveCategories() {
   const { data, error } = await supabase.from("ticket_categories").select("*").eq("is_active", true).order("name");
@@ -60,4 +61,12 @@ export async function addTicketComment(ticketId: string, body: string, internal 
   const { data, error } = await supabase.rpc("add_ticket_comment", { p_ticket_id: ticketId, p_body: body, p_is_internal: internal });
   if (error) throw error;
   return data;
+}
+
+export function subscribeToTicketChanges(onChange: () => void): RealtimeChannel {
+  return supabase.channel("supportech-tickets")
+    .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "ticket_comments" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "ticket_history" }, onChange)
+    .subscribe();
 }
