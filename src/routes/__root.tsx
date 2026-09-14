@@ -8,10 +8,11 @@ import {
   Scripts,
   redirect,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { normalizeSupportError, installGlobalErrorHandlers, type SupportError } from "../lib/error-handling";
 import { supabase, supabaseConfigured } from "../lib/supabase/client";
 
 function NotFoundComponent() {
@@ -28,15 +29,21 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
   const router = useRouter();
-  useEffect(() => { reportLovableError(error, { boundary: "tanstack_root_error_component" }); }, [error]);
+  const [supportError] = useState<SupportError>(() => normalizeSupportError(error, "route_error", "Não foi possível carregar esta página."));
+  useEffect(() => { reportLovableError(error, { boundary: "tanstack_root_error_component", supportReference: supportError.reference, supportCode: supportError.code }); }, [error, supportError]);
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Não foi possível carregar a página</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Ocorreu um erro inesperado. Tente atualizar ou voltar ao início.</p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+      <div className="w-full max-w-lg rounded-2xl border border-border/70 bg-card p-6 shadow-xl sm:p-8">
+        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-destructive">Erro da aplicação</div>
+        <h1 className="mt-2 text-xl font-semibold tracking-tight text-foreground">Não foi possível carregar a página</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{supportError.userMessage}</p>
+        <div className="mt-5 rounded-lg border border-border/70 bg-muted/30 p-3 text-xs">
+          <div className="font-semibold text-foreground">Informações para o suporte</div>
+          <div className="mt-2 grid gap-1 text-muted-foreground"><span>Referência: <strong className="text-foreground">{supportError.reference}</strong></span><span>Código: <strong className="text-foreground">{supportError.code}</strong></span><span>Operação: <strong className="text-foreground">{supportError.operation}</strong></span></div>
+          <details className="mt-3"><summary className="cursor-pointer font-medium text-foreground">Detalhes técnicos</summary><p className="mt-2 break-words leading-5 text-muted-foreground">{supportError.supportMessage}</p></details>
+        </div>
+        <div className="mt-6 flex flex-wrap gap-2">
           <button onClick={() => { router.invalidate(); reset(); }} className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">Tentar novamente</button>
           <a href="/" className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent">Voltar ao início</a>
         </div>
@@ -78,5 +85,6 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => installGlobalErrorHandlers(), []);
   return <QueryClientProvider client={queryClient}><Outlet /></QueryClientProvider>;
 }
