@@ -10,33 +10,153 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AtivosRouteImport } from './routes/ativos'
+import { Route as CatalogoRouteImport } from './routes/catalogo'
+import { Route as ChamadosRouteImport } from './routes/chamados'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as ConhecimentoRouteImport } from './routes/conhecimento'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as UsuariosRouteImport } from './routes/usuarios'
+import { Route as ChamadosTicketIdRouteImport } from './routes/chamados/$ticketId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AtivosRoute = AtivosRouteImport.update({
+  id: '/ativos',
+  path: '/ativos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CatalogoRoute = CatalogoRouteImport.update({
+  id: '/catalogo',
+  path: '/catalogo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChamadosRoute = ChamadosRouteImport.update({
+  id: '/chamados',
+  path: '/chamados',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConhecimentoRoute = ConhecimentoRouteImport.update({
+  id: '/conhecimento',
+  path: '/conhecimento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsuariosRoute = UsuariosRouteImport.update({
+  id: '/usuarios',
+  path: '/usuarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChamadosTicketIdRoute = ChamadosTicketIdRouteImport.update({
+  id: '/$ticketId',
+  path: '/$ticketId',
+  getParentRoute: () => ChamadosRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ativos': typeof AtivosRoute
+  '/catalogo': typeof CatalogoRoute
+  '/chamados': typeof ChamadosRouteWithChildren
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/conhecimento': typeof ConhecimentoRoute
+  '/login': typeof LoginRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/usuarios': typeof UsuariosRoute
+  '/chamados/$ticketId': typeof ChamadosTicketIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ativos': typeof AtivosRoute
+  '/catalogo': typeof CatalogoRoute
+  '/chamados': typeof ChamadosRouteWithChildren
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/conhecimento': typeof ConhecimentoRoute
+  '/login': typeof LoginRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/usuarios': typeof UsuariosRoute
+  '/chamados/$ticketId': typeof ChamadosTicketIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ativos': typeof AtivosRoute
+  '/catalogo': typeof CatalogoRoute
+  '/chamados': typeof ChamadosRouteWithChildren
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/conhecimento': typeof ConhecimentoRoute
+  '/login': typeof LoginRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/usuarios': typeof UsuariosRoute
+  '/chamados/$ticketId': typeof ChamadosTicketIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/ativos'
+    | '/catalogo'
+    | '/chamados'
+    | '/configuracoes'
+    | '/conhecimento'
+    | '/login'
+    | '/relatorios'
+    | '/usuarios'
+    | '/chamados/$ticketId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/ativos'
+    | '/catalogo'
+    | '/chamados'
+    | '/configuracoes'
+    | '/conhecimento'
+    | '/login'
+    | '/relatorios'
+    | '/usuarios'
+    | '/chamados/$ticketId'
+  id:
+    | '__root__'
+    | '/'
+    | '/ativos'
+    | '/catalogo'
+    | '/chamados'
+    | '/configuracoes'
+    | '/conhecimento'
+    | '/login'
+    | '/relatorios'
+    | '/usuarios'
+    | '/chamados/$ticketId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AtivosRoute: typeof AtivosRoute
+  CatalogoRoute: typeof CatalogoRoute
+  ChamadosRoute: typeof ChamadosRouteWithChildren
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
+  ConhecimentoRoute: typeof ConhecimentoRoute
+  LoginRoute: typeof LoginRoute
+  RelatoriosRoute: typeof RelatoriosRoute
+  UsuariosRoute: typeof UsuariosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +168,94 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ativos': {
+      id: '/ativos'
+      path: '/ativos'
+      fullPath: '/ativos'
+      preLoaderRoute: typeof AtivosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/catalogo': {
+      id: '/catalogo'
+      path: '/catalogo'
+      fullPath: '/catalogo'
+      preLoaderRoute: typeof CatalogoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chamados': {
+      id: '/chamados'
+      path: '/chamados'
+      fullPath: '/chamados'
+      preLoaderRoute: typeof ChamadosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conhecimento': {
+      id: '/conhecimento'
+      path: '/conhecimento'
+      fullPath: '/conhecimento'
+      preLoaderRoute: typeof ConhecimentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/relatorios': {
+      id: '/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/usuarios': {
+      id: '/usuarios'
+      path: '/usuarios'
+      fullPath: '/usuarios'
+      preLoaderRoute: typeof UsuariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chamados/$ticketId': {
+      id: '/chamados/$ticketId'
+      path: '/$ticketId'
+      fullPath: '/chamados/$ticketId'
+      preLoaderRoute: typeof ChamadosTicketIdRouteImport
+      parentRoute: typeof ChamadosRoute
+    }
   }
 }
 
+interface ChamadosRouteChildren {
+  ChamadosTicketIdRoute: typeof ChamadosTicketIdRoute
+}
+
+const ChamadosRouteChildren: ChamadosRouteChildren = {
+  ChamadosTicketIdRoute: ChamadosTicketIdRoute,
+}
+
+const ChamadosRouteWithChildren = ChamadosRoute._addFileChildren(
+  ChamadosRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AtivosRoute: AtivosRoute,
+  CatalogoRoute: CatalogoRoute,
+  ChamadosRoute: ChamadosRouteWithChildren,
+  ConfiguracoesRoute: ConfiguracoesRoute,
+  ConhecimentoRoute: ConhecimentoRoute,
+  LoginRoute: LoginRoute,
+  RelatoriosRoute: RelatoriosRoute,
+  UsuariosRoute: UsuariosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
