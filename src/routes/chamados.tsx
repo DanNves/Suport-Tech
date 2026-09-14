@@ -14,9 +14,18 @@ export const Route = createFileRoute("/chamados")({ component: ChamadosPage });
 type TicketStatus = "novo" | "em_atendimento" | "resolvido" | "fechado";
 type TicketItem = { id: string; ticket_number: number | string; subject: string; description?: string; status: TicketStatus; priority: string; created_at?: string; sla_resolution_at?: string | null };
 type CatalogItem = { id: string; name: string };
+type ToastState = { type: "success" | "error"; title: string; message: string };
 
 const statusLabel: Record<TicketStatus, string> = { novo: "Novo", em_atendimento: "Em atendimento", resolvido: "Resolvido", fechado: "Fechado" };
 const priorityLabel: Record<string, string> = { critica: "Crítica", alta: "Alta", media: "Média", baixa: "Baixa" };
+
+function errorMessage(err: unknown, fallback: string) {
+  if (!err || typeof err !== "object") return fallback;
+  const value = err as { message?: string; details?: string; hint?: string; code?: string };
+  const parts = [value.message, value.details, value.hint].filter(Boolean);
+  const detail = parts.join(" — ");
+  return detail || fallback;
+}
 
 function ChamadosPage() {
   const [tickets, setTickets] = useState<TicketItem[]>([]);
@@ -34,15 +43,20 @@ function ChamadosPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
-  const load = async () => {
+  const notify = (next: ToastState) => {
+    setToast(next);
+    window.setTimeout(() => setToast(null), next.type === "success" ? 3500 : 6000);
+  };
+
+  const load = async (feedback = false) => {
     setLoading(true);
-    setError(null);
     try {
       setTickets((await listMyTickets()) as TicketItem[]);
+      if (feedback) notify({ type: "success", title: "Fila atualizada", message: "Os chamados foram sincronizados com o sistema." });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível carregar os chamados.");
+      notify({ type: "error", title: "Não foi possível carregar", message: errorMessage(err, "Não foi possível carregar os chamados.") });
     } finally {
       setLoading(false);
     }
@@ -55,7 +69,7 @@ function ChamadosPage() {
       setCategories((categoryData ?? []) as CatalogItem[]);
       setServices((serviceData ?? []) as CatalogItem[]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível carregar categorias e serviços.");
+      notify({ type: "error", title: "Não foi possível carregar o catálogo", message: errorMessage(err, "Categorias e serviços não puderam ser carregados.") });
     } finally {
       setCatalogLoading(false);
     }
@@ -80,7 +94,6 @@ function ChamadosPage() {
   };
 
   const openCreateModal = () => {
-    setError(null);
     setOpen(true);
     if (!categories.length && !services.length) void loadCatalogs();
   };
@@ -92,21 +105,36 @@ function ChamadosPage() {
   };
 
   const create = async () => {
-    if (!subject.trim() || !description.trim() || saving) return;
+    if (saving) return;
+    if (subject.trim().length < 5) {
+      notify({ type: "error", title: "Assunto inválido", message: "Informe um assunto com pelo menos 5 caracteres." });
+      return;
+    }
+    if (description.trim().length < 10) {
+      notify({ type: "error", title: "Descrição inválida", message: "Informe uma descrição com pelo menos 10 caracteres." });
+      return;
+    }
+
     setSaving(true);
-    setError(null);
     try {
-      await createTicket({
+      const created = await createTicket({
         subject: subject.trim(),
         description: description.trim(),
         categoryId: categoryId || undefined,
         serviceId: serviceId || undefined,
         priority: ticketPriority,
       });
-      closeCreateModal();
+      const createdTicket = Array.isArray(created) ? created[0] : created as { ticket_number?: number | string } | null;
+      setOpen(false);
+      resetForm();
+      notify({
+        type: "success",
+        title: "Chamado registrado com sucesso",
+        message: createdTicket?.ticket_number ? `Chamado #${createdTicket.ticket_number} foi registrado e a fila está sendo atualizada.` : "O chamado foi registrado e a fila está sendo atualizada.",
+      });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível abrir o chamado.");
+      notify({ type: "error", title: "Não foi possível abrir o chamado", message: errorMessage(err, "A operação não pôde ser concluída.") });
     } finally {
       setSaving(false);
     }
@@ -114,11 +142,11 @@ function ChamadosPage() {
 
   const transition = async (id: string, next: "em_atendimento" | "resolvido" | "fechado") => {
     try {
-      setError(null);
       await transitionTicket(id, next);
+      notify({ type: "success", title: "Chamado atualizado", message: `Status alterado para ${statusLabel[next]}.` });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível atualizar o chamado.");
+      notify({ type: "error", title: "Não foi possível atualizar", message: errorMessage(err, "O status do chamado não pôde ser alterado.") });
     }
   };
 
@@ -142,7 +170,7 @@ function ChamadosPage() {
             </div>
           </div>
           <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
-            <Button variant="outline" onClick={() => void load()} disabled={loading} className="border-white/25 bg-white/10 text-white hover:bg-white/20 hover:text-white"><RefreshCw className="mr-2 h-4 w-4" />Atualizar</Button>
+            <Button variant="outline" onClick={() => void load(true)} disabled={loading} className="border-white/25 bg-white/10 text-white hover:bg-white/20 hover:text-white"><RefreshCw className="mr-2 h-4 w-4" />Atualizar</Button>
             <Button onClick={openCreateModal} className="bg-white text-primary shadow-none hover:bg-white/90"><Plus className="mr-2 h-4 w-4" />Novo chamado</Button>
           </div>
         </div>
@@ -154,8 +182,6 @@ function ChamadosPage() {
         <QueueMetric label="Em atendimento" value={loading ? "—" : metrics.progress} icon={Clock3} active={status === "em_atendimento"} onClick={() => setStatus("em_atendimento")} />
         <QueueMetric label="Resolvidos" value={loading ? "—" : metrics.resolved} icon={CheckCircle2} active={status === "resolvido"} onClick={() => setStatus("resolvido")} />
       </div>
-
-      {error && <Card className="flex items-start gap-3 border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><div className="flex-1"><div className="font-medium">Não foi possível concluir a operação</div><div className="mt-0.5 text-destructive/80">{error}</div></div></Card>}
 
       <Card className="overflow-hidden border-border/70 shadow-sm">
         <div className="border-b border-border/70 p-4 sm:p-5">
@@ -189,8 +215,26 @@ function ChamadosPage() {
         onClose={closeCreateModal}
         onCreate={() => void create()}
       />}
+
+      {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
     </div>
   </AppShell>;
+}
+
+function Toast({ toast, onClose }: { toast: ToastState; onClose: () => void }) {
+  const success = toast.type === "success";
+  return <div className="fixed bottom-5 left-5 z-[70] w-[min(420px,calc(100vw-2.5rem))]" role="status" aria-live="polite">
+    <div className={`flex items-start gap-3 rounded-xl border bg-background p-4 shadow-2xl ${success ? "border-emerald-200" : "border-destructive/30"}`}>
+      <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${success ? "bg-emerald-50 text-emerald-600" : "bg-destructive/10 text-destructive"}`}>
+        {success ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-foreground">{toast.title}</div>
+        <div className="mt-1 text-xs leading-5 text-muted-foreground break-words">{toast.message}</div>
+      </div>
+      <Button variant="ghost" size="icon" onClick={onClose} className="-mr-2 -mt-2 h-8 w-8 shrink-0" aria-label="Fechar notificação"><X className="h-4 w-4" /></Button>
+    </div>
+  </div>;
 }
 
 function CreateTicketModal({ subject, description, categoryId, serviceId, ticketPriority, categories, services, catalogLoading, saving, onSubjectChange, onDescriptionChange, onCategoryChange, onServiceChange, onPriorityChange, onClose, onCreate }: {
