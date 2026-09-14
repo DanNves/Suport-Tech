@@ -22,7 +22,7 @@ export async function getMyProfile() {
 }
 
 export async function createTicket(input: { subject: string; description: string; categoryId?: string; serviceId?: string; assetId?: string; priority?: "baixa" | "media" | "alta" | "critica" }) {
-  const { data, error } = await supabase.rpc("create_ticket", { p_subject: input.subject, p_description: input.description, p_category_id: input.categoryId ?? null, p_service_id: input.serviceId ?? null, p_asset_id: input.assetId ?? null, p_priority: input.priority ?? null });
+  const { data, error } = await supabase.rpc("create_ticket" as never, { p_subject: input.subject, p_description: input.description, p_category_id: input.categoryId ?? null, p_service_id: input.serviceId ?? null, p_asset_id: input.assetId ?? null, p_priority: input.priority ?? null } as never);
   if (error) throw error;
   return data;
 }
@@ -52,13 +52,13 @@ export async function getTicketComments(ticketId: string) {
 }
 
 export async function transitionTicket(ticketId: string, status: "novo" | "atribuido" | "em_atendimento" | "aguardando_usuario" | "resolvido" | "fechado") {
-  const { data, error } = await supabase.rpc("transition_ticket", { p_ticket_id: ticketId, p_to_status: status });
+  const { data, error } = await supabase.rpc("transition_ticket" as never, { p_ticket_id: ticketId, p_to_status: status } as never);
   if (error) throw error;
   return data;
 }
 
 export async function addTicketComment(ticketId: string, body: string, internal = false) {
-  const { data, error } = await supabase.rpc("add_ticket_comment", { p_ticket_id: ticketId, p_body: body, p_is_internal: internal });
+  const { data, error } = await supabase.rpc("add_ticket_comment" as never, { p_ticket_id: ticketId, p_body: body, p_is_internal: internal } as never);
   if (error) throw error;
   return data;
 }
