@@ -11,12 +11,12 @@ import { createTicket, getActiveCategories, getActiveServices, listMyTickets, tr
 
 export const Route = createFileRoute("/chamados")({ component: ChamadosPage });
 
-type TicketStatus = "novo" | "em_atendimento" | "resolvido" | "fechado";
-type TicketItem = { id: string; ticket_number: number | string; subject: string; description?: string; status: TicketStatus; priority: string; created_at?: string; sla_resolution_at?: string | null };
+type TicketStatus = "novo" | "atribuido" | "em_atendimento" | "aguardando_usuario" | "resolvido" | "fechado";
+type TicketItem = { id: string; ticket_number: number | string; subject: string; description?: string; status: TicketStatus; priority: string; created_at?: string; resolution_due_at?: string | null };
 type CatalogItem = { id: string; name: string };
 type ToastState = { type: "success" | "error"; title: string; message: string };
 
-const statusLabel: Record<TicketStatus, string> = { novo: "Novo", em_atendimento: "Em atendimento", resolvido: "Resolvido", fechado: "Fechado" };
+const statusLabel: Record<TicketStatus, string> = { novo: "Novo", atribuido: "Atribuído", em_atendimento: "Em atendimento", aguardando_usuario: "Aguardando usuário", resolvido: "Resolvido", fechado: "Fechado" };
 const priorityLabel: Record<string, string> = { critica: "Crítica", alta: "Alta", media: "Média", baixa: "Baixa" };
 
 function errorMessage(err: unknown, fallback: string) {
@@ -152,7 +152,7 @@ function ChamadosPage() {
 
   const metrics = {
     total: tickets.length,
-    open: tickets.filter(t => ["novo", "em_atendimento"].includes(t.status)).length,
+    open: tickets.filter(t => ["novo", "em_atendimento", "atribuido", "aguardando_usuario"].includes(t.status)).length,
     progress: tickets.filter(t => t.status === "em_atendimento").length,
     resolved: tickets.filter(t => ["resolvido", "fechado"].includes(t.status)).length,
   };
@@ -189,7 +189,7 @@ function ChamadosPage() {
             <div><div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Chamados registrados</div><h2 className="mt-1 text-base font-semibold">Chamados recentes</h2></div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar por número ou assunto" className="h-9 w-full pl-9 sm:w-60" /></div>
-              <select value={status} onChange={e => setStatus(e.target.value as "todos" | TicketStatus)} className="h-9 rounded-md border border-input bg-background px-3 text-xs"><option value="todos">Todos os status</option><option value="novo">Novo</option><option value="em_atendimento">Em atendimento</option><option value="resolvido">Resolvido</option><option value="fechado">Fechado</option></select>
+              <select value={status} onChange={e => setStatus(e.target.value as "todos" | TicketStatus)} className="h-9 rounded-md border border-input bg-background px-3 text-xs"><option value="todos">Todos os status</option><option value="novo">Novo</option><option value="atribuido">Atribuído</option><option value="em_atendimento">Em atendimento</option><option value="aguardando_usuario">Aguardando usuário</option><option value="resolvido">Resolvido</option><option value="fechado">Fechado</option></select>
               <select value={priority} onChange={e => setPriority(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-xs"><option value="todos">Todas prioridades</option><option value="critica">Crítica</option><option value="alta">Alta</option><option value="media">Média</option><option value="baixa">Baixa</option></select>
             </div>
           </div>
@@ -230,7 +230,7 @@ function Toast({ toast, onClose }: { toast: ToastState; onClose: () => void }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold text-foreground">{toast.title}</div>
-        <div className="mt-1 text-xs leading-5 text-muted-foreground break-words">{toast.message}</div>
+        <div className="mt-1 break-words text-xs leading-5 text-muted-foreground">{toast.message}</div>
       </div>
       <Button variant="ghost" size="icon" onClick={onClose} className="-mr-2 -mt-2 h-8 w-8 shrink-0" aria-label="Fechar notificação"><X className="h-4 w-4" /></Button>
     </div>
@@ -268,4 +268,4 @@ function Field({ label, required, className = "", children }: { label: string; r
 
 function QueueMetric({ label, value, icon: Icon, active, onClick }: { label: string; value: number | string; icon: typeof Inbox; active: boolean; onClick: () => void }) { return <button onClick={onClick} className={`rounded-xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm ${active ? "border-primary/30 bg-primary/[0.045]" : "border-border/70 bg-card"}`}><div className="flex items-center justify-between"><Icon className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground"}`} /><span className="text-xl font-bold">{value}</span></div><div className="mt-2 text-xs font-medium text-muted-foreground">{label}</div></button>; }
 
-function TicketRow({ ticket, onTransition }: { ticket: TicketItem; onTransition: (id: string, status: "em_atendimento" | "resolvido" | "fechado") => void }) { const isLate = !!ticket.sla_resolution_at && new Date(ticket.sla_resolution_at).getTime() < Date.now() && !["resolvido", "fechado"].includes(ticket.status); return <div className="group flex flex-col gap-4 p-4 transition-colors hover:bg-muted/25 sm:px-5 lg:flex-row lg:items-center"><div className="flex min-w-0 flex-1 items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"><Ticket className="h-4 w-4" /></div><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-[10px] font-semibold text-primary">#{ticket.ticket_number}</span><Badge variant="outline" className="text-[10px]">{priorityLabel[ticket.priority] ?? ticket.priority}</Badge>{isLate && <Badge variant="destructive" className="text-[10px]">SLA vencido</Badge>}</div><div className="mt-1 truncate text-sm font-semibold">{ticket.subject}</div><div className="mt-0.5 text-[11px] text-muted-foreground">{ticket.created_at ? new Date(ticket.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "Data não disponível"}</div></div></div><div className="flex items-center justify-between gap-3 lg:justify-end"><Badge variant={ticket.status === "resolvido" || ticket.status === "fechado" ? "secondary" : "outline"}>{statusLabel[ticket.status]}</Badge>{ticket.status === "novo" && <Button size="sm" onClick={() => onTransition(ticket.id, "em_atendimento")}>Iniciar</Button>}{ticket.status === "em_atendimento" && <Button size="sm" onClick={() => onTransition(ticket.id, "resolvido")}>Resolver</Button>}{ticket.status === "resolvido" && <Button size="sm" variant="outline" onClick={() => onTransition(ticket.id, "fechado")}>Fechar</Button>}</div></div>; }
+function TicketRow({ ticket, onTransition }: { ticket: TicketItem; onTransition: (id: string, status: "em_atendimento" | "resolvido" | "fechado") => void }) { const isLate = !!ticket.resolution_due_at && new Date(ticket.resolution_due_at).getTime() < Date.now() && !["resolvido", "fechado"].includes(ticket.status); return <div className="group flex flex-col gap-4 p-4 transition-colors hover:bg-muted/25 sm:px-5 lg:flex-row lg:items-center"><div className="flex min-w-0 flex-1 items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"><Ticket className="h-4 w-4" /></div><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-[10px] font-semibold text-primary">#{ticket.ticket_number}</span><Badge variant="outline" className="text-[10px]">{priorityLabel[ticket.priority] ?? ticket.priority}</Badge>{isLate && <Badge variant="destructive" className="text-[10px]">SLA vencido</Badge>}</div><div className="mt-1 truncate text-sm font-semibold">{ticket.subject}</div><div className="mt-0.5 text-[11px] text-muted-foreground">{ticket.created_at ? new Date(ticket.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "Data não disponível"}</div></div></div><div className="flex items-center justify-between gap-3 lg:justify-end"><Badge variant={ticket.status === "resolvido" || ticket.status === "fechado" ? "secondary" : "outline"}>{statusLabel[ticket.status]}</Badge>{ticket.status === "novo" && <Button size="sm" onClick={() => onTransition(ticket.id, "em_atendimento")}>Iniciar</Button>}{ticket.status === "em_atendimento" && <Button size="sm" onClick={() => onTransition(ticket.id, "resolvido")}>Resolver</Button>}{ticket.status === "resolvido" && <Button size="sm" variant="outline" onClick={() => onTransition(ticket.id, "fechado")}>Fechar</Button>}</div></div>; }
