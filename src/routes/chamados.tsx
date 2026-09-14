@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AlertCircle, CheckCircle2, Clock3, Filter, Inbox, Plus, RefreshCw, Search, Ticket, Timer, X } from "lucide-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
@@ -198,7 +198,7 @@ function CreateTicketModal({ subject, description, categoryId, serviceId, ticket
   onSubjectChange: (value: string) => void; onDescriptionChange: (value: string) => void; onCategoryChange: (value: string) => void; onServiceChange: (value: string) => void; onPriorityChange: (value: "baixa" | "media" | "alta" | "critica") => void; onClose: () => void; onCreate: () => void;
 }) {
   return <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-[2px] sm:p-6" role="dialog" aria-modal="true" aria-labelledby="novo-chamado-title">
-    <div className="w-full max-w-2xl animate-in fade-in zoom-in-95 duration-150">
+    <div className="w-full max-w-2xl">
       <Card className="overflow-hidden border-border/80 bg-background shadow-2xl">
         <div className="flex items-start justify-between border-b border-border/70 px-5 py-4 sm:px-6">
           <div><div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Central de suporte</div><h2 id="novo-chamado-title" className="mt-1 text-lg font-semibold">Abrir novo chamado</h2><p className="mt-1 text-xs text-muted-foreground">Registre a solicitação com contexto suficiente para o atendimento.</p></div>
@@ -220,7 +220,7 @@ function CreateTicketModal({ subject, description, categoryId, serviceId, ticket
   </div>;
 }
 
-function Field({ label, required, className = "", children }: { label: string; required?: boolean; className?: string; children: React.ReactNode }) { return <label className={`block space-y-1.5 ${className}`}><span className="text-xs font-medium text-foreground">{label}{required && <span className="ml-1 text-destructive">*</span>}</span>{children}</label>; }
+function Field({ label, required, className = "", children }: { label: string; required?: boolean; className?: string; children: ReactNode }) { return <label className={`block space-y-1.5 ${className}`}><span className="text-xs font-medium text-foreground">{label}{required && <span className="ml-1 text-destructive">*</span>}</span>{children}</label>; }
 
 function QueueMetric({ label, value, icon: Icon, active, onClick }: { label: string; value: number | string; icon: typeof Inbox; active: boolean; onClick: () => void }) { return <button onClick={onClick} className={`rounded-xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm ${active ? "border-primary/30 bg-primary/[0.045]" : "border-border/70 bg-card"}`}><div className="flex items-center justify-between"><Icon className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground"}`} /><span className="text-xl font-bold">{value}</span></div><div className="mt-2 text-xs font-medium text-muted-foreground">{label}</div></button>; }
 
