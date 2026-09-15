@@ -61,7 +61,8 @@ export async function createTicket(input: { subject: string; description: string
 }
 
 export async function listMyTickets() {
-  const { data, error } = await supabase.from("tickets").select("*").order("created_at", { ascending: false });
+  await assertAuthenticated("tickets.list");
+  const { data, error } = await supabase.rpc("get_my_tickets" as never);
   if (error) throwRepositoryError(error, "tickets.list", "Não foi possível carregar os chamados.");
   return data;
 }
@@ -105,6 +106,13 @@ export async function transitionTicket(ticketId: string, status: "novo" | "atrib
 export async function addTicketComment(ticketId: string, body: string, internal = false) {
   const { data, error } = await supabase.rpc("add_ticket_comment" as never, { p_ticket_id: ticketId, p_body: body, p_is_internal: internal } as never);
   if (error) throwRepositoryError(error, "tickets.comments.create", "Não foi possível registrar o comentário.");
+  return data;
+}
+
+export async function deleteTicketForTesting(ticketId: string) {
+  await assertAuthenticated("tickets.delete_testing");
+  const { data, error } = await supabase.rpc("delete_ticket_for_testing" as never, { p_ticket_id: ticketId } as never);
+  if (error) throwRepositoryError(error, "tickets.delete_testing", "Não foi possível excluir o chamado de teste.");
   return data;
 }
 
