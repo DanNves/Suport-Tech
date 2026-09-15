@@ -2,8 +2,35 @@ import { supabase } from "./client";
 import { normalizeSupportError } from "../error-handling";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
+const EXPECTED_SUPABASE_HOST = "afylrvytkpmetzmeosvb.supabase.co";
+
 function throwRepositoryError(error: unknown, operation: string, fallback: string): never {
   throw normalizeSupportError(error, operation, fallback);
+}
+
+function assertSupportechEnvironment(operation: string) {
+  const configuredUrl = import.meta.env["VITE_SUPABASE_URL"] as string | undefined;
+  let host = "não configurado";
+  try { if (configuredUrl) host = new URL(configuredUrl).host; } catch { host = "URL inválida"; }
+  if (host !== EXPECTED_SUPABASE_HOST) {
+    const error = new Error(`Projeto Supabase incorreto no ambiente do Supportech: ${host}`) as Error & { code: string; status?: number };
+    error.code = "SUPABASE_PROJECT_MISMATCH";
+    error.status = 503;
+    throwRepositoryError(error, operation, "O ambiente do Supportech está apontando para o projeto Supabase incorreto.");
+  }
+}
+
+async function assertAuthenticated(operation: string) {
+  assertSupportechEnvironment(operation);
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throwRepositoryError(error, `${operation}.session`, "Não foi possível validar sua sessão.");
+  if (!data.session?.user) {
+    const error = new Error("Sessão autenticada não encontrada para executar a operação.") as Error & { code: string; status?: number };
+    error.code = "SESSION_MISSING";
+    error.status = 401;
+    throwRepositoryError(error, `${operation}.session`, "Sua sessão não está ativa. Entre novamente no sistema.");
+  }
+  return data.session;
 }
 
 export async function getActiveCategories() {
@@ -27,6 +54,7 @@ export async function getMyProfile() {
 }
 
 export async function createTicket(input: { subject: string; description: string; categoryId?: string; serviceId?: string; assetId?: string; priority?: "baixa" | "media" | "alta" | "critica" }) {
+  await assertAuthenticated("tickets.create");
   const { data, error } = await supabase.rpc("create_ticket" as never, { p_subject: input.subject, p_description: input.description, p_category_id: input.categoryId ?? null, p_service_id: input.serviceId ?? null, p_asset_id: input.assetId ?? null, p_priority: input.priority ?? null } as never);
   if (error) throwRepositoryError(error, "tickets.create", "Não foi possível abrir o chamado.");
   return data;
