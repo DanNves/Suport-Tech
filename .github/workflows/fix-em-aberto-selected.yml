@@ -1,0 +1,45 @@
+name: Fix selected filter card
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Adjust selected card visual state
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/TicketCenter.tsx')
+          s = p.read_text(encoding='utf-8')
+          old = 'active?"border-primary/30 bg-primary/5 ring-1 ring-primary/15":"border-border/70 bg-background hover:bg-muted/40"'
+          new = 'active?"border-primary bg-primary/10 ring-2 ring-primary/20 shadow-sm":"border-border/70 bg-background hover:bg-muted/40"'
+          if old not in s:
+              raise SystemExit('Target visual class not found; no changes made.')
+          s = s.replace(old, new, 1)
+          old2 = '<span className="text-xs font-medium text-muted-foreground">{label}</span><Icon className="h-4 w-4 text-muted-foreground"/>'
+          new2 = '<span className={`text-xs font-medium ${active ? "text-primary" : "text-muted-foreground"}`}>{label}</span><Icon className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground"}`}/>'
+          if old2 not in s:
+              raise SystemExit('Target label/icon classes not found; no changes made.')
+          s = s.replace(old2, new2, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/TicketCenter.tsx
+          git commit -m "fix: highlight selected ticket filters"
+          git rm .github/workflows/fix-em-aberto-selected.yml
+          git commit -m "chore: remove temporary fix workflow"
+          git push
