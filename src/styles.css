@@ -28,6 +28,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -138,12 +139,13 @@
 
 /* Estado visual do filtro ativo da fila de chamados. */
 button[class~="bg-primary/5"][class~="ring-primary/15"] {
-  background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+  background-color: var(--primary) !important;
   border-color: var(--primary) !important;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent) !important;
+  color: var(--primary-foreground) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 22%, transparent), 0 4px 12px color-mix(in srgb, var(--primary) 18%, transparent) !important;
 }
 
 button[class~="bg-primary/5"][class~="ring-primary/15"] span,
 button[class~="bg-primary/5"][class~="ring-primary/15"] svg {
-  color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
 }
