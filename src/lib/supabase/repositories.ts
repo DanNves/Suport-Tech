@@ -44,15 +44,27 @@ export async function getTicket(ticketId: string) {
   return data;
 }
 
-export async function getTicketHistory(ticketId: string) {
-  const { data, error } = await supabase.from("ticket_history").select("*").eq("ticket_id", ticketId).order("created_at", { ascending: true });
-  if (error) throwRepositoryError(error, "tickets.history.list", "Não foi possível carregar o histórico do chamado.");
+export async function getTicketDetails(ticketId: string) {
+  const { data, error } = await supabase.rpc("get_ticket_details" as never, { p_ticket_id: ticketId } as never);
+  if (error) throwRepositoryError(error, "tickets.details.get", "Não foi possível carregar os detalhes do chamado.");
+  return data as never;
+}
+
+export async function getSupportStaff() {
+  const { data, error } = await supabase.rpc("get_support_staff" as never);
+  if (error) throwRepositoryError(error, "staff.list", "Não foi possível carregar os técnicos e atendentes.");
   return data;
 }
 
-export async function getTicketComments(ticketId: string) {
-  const { data, error } = await supabase.from("ticket_comments").select("*").eq("ticket_id", ticketId).eq("is_internal", false).order("created_at", { ascending: true });
-  if (error) throwRepositoryError(error, "tickets.comments.list", "Não foi possível carregar os comentários.");
+export async function assignTicket(ticketId: string, assigneeId: string, note?: string) {
+  const { data, error } = await supabase.rpc("assign_ticket" as never, { p_ticket_id: ticketId, p_assignee_id: assigneeId, p_note: note ?? null } as never);
+  if (error) throwRepositoryError(error, "tickets.assign", "Não foi possível atribuir o chamado.");
+  return data;
+}
+
+export async function updateTicket(input: { ticketId: string; subject?: string; description?: string; categoryId?: string | null; serviceId?: string | null; priority?: "baixa" | "media" | "alta" | "critica" | null }) {
+  const { data, error } = await supabase.rpc("update_ticket" as never, { p_ticket_id: input.ticketId, p_subject: input.subject ?? null, p_description: input.description ?? null, p_category_id: input.categoryId ?? null, p_service_id: input.serviceId ?? null, p_priority: input.priority ?? null } as never);
+  if (error) throwRepositoryError(error, "tickets.update", "Não foi possível atualizar o chamado.");
   return data;
 }
 
@@ -71,6 +83,7 @@ export async function addTicketComment(ticketId: string, body: string, internal 
 export function subscribeToTicketChanges(onChange: () => void): RealtimeChannel {
   return supabase.channel("supportech-tickets")
     .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "ticket_assignments" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "ticket_comments" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "ticket_history" }, onChange)
     .subscribe();
