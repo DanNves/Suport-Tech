@@ -80,6 +80,10 @@ export async function getTicketDetails(ticketId: string) {
 }
 
 export async function getSupportStaff() {
+  const profile = await getMyProfile();
+  const roles = profile?.roles as { key?: string } | { key?: string }[] | null | undefined;
+  const roleKey = Array.isArray(roles) ? roles[0]?.key : roles?.key;
+  if (!roleKey || roleKey === "requester") return [];
   const { data, error } = await supabase.rpc("get_support_staff" as never);
   if (error) throwRepositoryError(error, "staff.list", "Não foi possível carregar os técnicos e atendentes.");
   return data;
