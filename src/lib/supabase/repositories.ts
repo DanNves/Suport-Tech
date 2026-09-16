@@ -45,6 +45,12 @@ export async function getActiveServices() {
   return data;
 }
 
+export async function getActiveDepartments() {
+  const { data, error } = await supabase.from("departments").select("id, name, code").eq("is_active", true).order("name");
+  if (error) throwRepositoryError(error, "catalog.departments.list", "Não foi possível carregar os setores.");
+  return data;
+}
+
 export async function getMyProfile() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -53,9 +59,9 @@ export async function getMyProfile() {
   return data;
 }
 
-export async function createTicket(input: { subject: string; description: string; categoryId?: string; serviceId?: string; assetId?: string; priority?: "baixa" | "media" | "alta" | "critica" }) {
+export async function createTicket(input: { subject: string; description: string; categoryId?: string; serviceId?: string; assetId?: string; departmentId: string; priority?: "baixa" | "media" | "alta" | "critica" }) {
   await assertAuthenticated("tickets.create");
-  const { data, error } = await supabase.rpc("create_ticket" as never, { p_subject: input.subject, p_description: input.description, p_category_id: input.categoryId ?? null, p_service_id: input.serviceId ?? null, p_asset_id: input.assetId ?? null, p_priority: input.priority ?? null } as never);
+  const { data, error } = await supabase.rpc("create_ticket" as never, { p_subject: input.subject, p_description: input.description, p_category_id: input.categoryId ?? null, p_service_id: input.serviceId ?? null, p_asset_id: input.assetId ?? null, p_priority: input.priority ?? null, p_department_id: input.departmentId } as never);
   if (error) throwRepositoryError(error, "tickets.create", "Não foi possível abrir o chamado.");
   return data;
 }
