@@ -57,14 +57,14 @@ export function normalizeSupportError(error: unknown, operation: string, fallbac
   else if (code.startsWith("PGRST")) userMessage = "O serviço de dados recusou ou não conseguiu processar a solicitação.";
   else if (/network|fetch|failed to fetch|offline|timeout/i.test(message)) userMessage = "Não foi possível comunicar com o servidor. Verifique sua conexão e tente novamente.";
   else if (/jwt|token|session|refresh token/i.test(message)) userMessage = "Sua sessão não está mais válida. Entre novamente no sistema.";
-  else if (/profile/i.test(message) && /foreign key|not present/i.test(message)) userMessage = "Seu usuário ainda não está vinculado ao perfil do Supportech. Solicite a regularização ao suporte.";
+  else if (/profile/i.test(message) && /foreign key|not present/i.test(message)) userMessage = "Seu usuário ainda não está vinculado ao perfil do SuportTech. Solicite a regularização ao suporte.";
   else if (/not configured|placeholder/i.test(message)) {
     userMessage = "O ambiente do sistema não está configurado para acessar o banco de dados.";
     severity = "critical";
   }
 
   const result = new Error(userMessage) as SupportError;
-  result.name = "SupportechError";
+  result.name = "SuportTechError";
   result.code = code;
   result.operation = operation;
   result.userMessage = userMessage;
@@ -74,7 +74,7 @@ export function normalizeSupportError(error: unknown, operation: string, fallbac
   result.original = error;
 
   if (typeof console !== "undefined") {
-    console.error("[Supportech] erro", {
+    console.error("[SuportTech] erro", {
       reference: result.reference,
       operation,
       code,
