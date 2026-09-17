@@ -126,11 +126,17 @@ export async function deleteTicketForTesting(ticketId: string) {
   return data;
 }
 
-export function subscribeToTicketChanges(onChange: () => void): RealtimeChannel {
-  return supabase.channel("supportech-tickets")
+export function subscribeToTicketChanges(onChange: () => void, onError?: (message: string) => void): RealtimeChannel {
+  assertSupportechEnvironment("realtime.subscribe");
+  const channel = supabase.channel(`supportech-tickets-${crypto.randomUUID()}`);
+  channel
     .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "ticket_assignments" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "ticket_comments" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "ticket_history" }, onChange)
-    .subscribe();
+    .subscribe((status) => {
+      if (status === "CHANNEL_ERROR") onError?.("A atualização em tempo real do atendimento encontrou um erro de conexão.");
+      if (status === "TIMED_OUT") onError?.("A atualização em tempo real demorou para conectar.");
+    });
+  return channel;
 }
