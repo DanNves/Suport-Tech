@@ -47,7 +47,7 @@ function ProfilePage() {
     if (!profile || fullName.trim().length < 2 || saving) return;
     setSaving(true); setError(null); setMessage(null);
     try {
-      const { error: updateError } = await supabase.from("profiles").update({ full_name: fullName.trim(), phone: phone.trim() || null, job_title: jobTitle.trim() || null, department_id: departmentId || null }).eq("id", profile.id);
+      const { error: updateError } = await (supabase.from("profiles") as any).update({ full_name: fullName.trim(), phone: phone.trim() || null, job_title: jobTitle.trim() || null, department_id: departmentId || null }).eq("id", profile.id);
       if (updateError) throw updateError;
       setMessage("Perfil atualizado com sucesso.");
       await load();
