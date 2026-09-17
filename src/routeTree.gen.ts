@@ -16,6 +16,7 @@ import { Route as ChamadosRouteImport } from './routes/chamados'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ConhecimentoRouteImport } from './routes/conhecimento'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as UsuariosRouteImport } from './routes/usuarios'
 import { Route as ChamadosTicketIdRouteImport } from './routes/chamados/$ticketId'
@@ -55,6 +56,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PerfilRoute = PerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RelatoriosRoute = RelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof ConfiguracoesRoute
   '/conhecimento': typeof ConhecimentoRoute
   '/login': typeof LoginRoute
+  '/perfil': typeof PerfilRoute
   '/relatorios': typeof RelatoriosRoute
   '/usuarios': typeof UsuariosRoute
   '/chamados/$ticketId': typeof ChamadosTicketIdRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof ConfiguracoesRoute
   '/conhecimento': typeof ConhecimentoRoute
   '/login': typeof LoginRoute
+  '/perfil': typeof PerfilRoute
   '/relatorios': typeof RelatoriosRoute
   '/usuarios': typeof UsuariosRoute
   '/chamados/$ticketId': typeof ChamadosTicketIdRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/conhecimento': typeof ConhecimentoRoute
   '/login': typeof LoginRoute
+  '/perfil': typeof PerfilRoute
   '/relatorios': typeof RelatoriosRoute
   '/usuarios': typeof UsuariosRoute
   '/chamados/$ticketId': typeof ChamadosTicketIdRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/conhecimento'
     | '/login'
+    | '/perfil'
     | '/relatorios'
     | '/usuarios'
     | '/chamados/$ticketId'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/conhecimento'
     | '/login'
+    | '/perfil'
     | '/relatorios'
     | '/usuarios'
     | '/chamados/$ticketId'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/conhecimento'
     | '/login'
+    | '/perfil'
     | '/relatorios'
     | '/usuarios'
     | '/chamados/$ticketId'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   ConhecimentoRoute: typeof ConhecimentoRoute
   LoginRoute: typeof LoginRoute
+  PerfilRoute: typeof PerfilRoute
   RelatoriosRoute: typeof RelatoriosRoute
   UsuariosRoute: typeof UsuariosRoute
 }
@@ -210,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/perfil': {
+      id: '/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof PerfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/relatorios': {
       id: '/relatorios'
       path: '/relatorios'
@@ -254,6 +274,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   ConhecimentoRoute: ConhecimentoRoute,
   LoginRoute: LoginRoute,
+  PerfilRoute: PerfilRoute,
   RelatoriosRoute: RelatoriosRoute,
   UsuariosRoute: UsuariosRoute,
 }
