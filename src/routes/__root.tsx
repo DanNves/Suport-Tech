@@ -1,90 +1,23 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  Outlet,
-  Link,
-  createRootRouteWithContext,
-  useRouter,
-  HeadContent,
-  Scripts,
-  redirect,
-} from "@tanstack/react-router";
+import { Outlet, Link, createRootRouteWithContext, useRouter, HeadContent, Scripts, redirect } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { normalizeSupportError, installGlobalErrorHandlers, type SupportError } from "../lib/error-handling";
 import { supabase, supabaseConfigured } from "../lib/supabase/client";
 
-function NotFoundComponent() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Página não encontrada</h2>
-        <p className="mt-2 text-sm text-muted-foreground">A página solicitada não existe ou foi movida.</p>
-        <div className="mt-6"><Link to="/" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">Voltar ao início</Link></div>
-      </div>
-    </div>
-  );
-}
-
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  const router = useRouter();
-  const [supportError] = useState<SupportError>(() => normalizeSupportError(error, "route_error", "Não foi possível carregar esta página."));
-  useEffect(() => { reportLovableError(error, { boundary: "tanstack_root_error_component", supportReference: supportError.reference, supportCode: supportError.code }); }, [error, supportError]);
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-lg rounded-2xl border border-border/70 bg-card p-6 shadow-xl sm:p-8">
-        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-destructive">Erro da aplicação</div>
-        <h1 className="mt-2 text-xl font-semibold tracking-tight text-foreground">Não foi possível carregar a página</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{supportError.userMessage}</p>
-        <div className="mt-5 rounded-lg border border-border/70 bg-muted/30 p-3 text-xs">
-          <div className="font-semibold text-foreground">Informações para o suporte</div>
-          <div className="mt-2 grid gap-1 text-muted-foreground"><span>Referência: <strong className="text-foreground">{supportError.reference}</strong></span><span>Código: <strong className="text-foreground">{supportError.code}</strong></span><span>Operação: <strong className="text-foreground">{supportError.operation}</strong></span></div>
-          <details className="mt-3"><summary className="cursor-pointer font-medium text-foreground">Detalhes técnicos</summary><p className="mt-2 break-words leading-5 text-muted-foreground">{supportError.supportMessage}</p></details>
-        </div>
-        <div className="mt-6 flex flex-wrap gap-2">
-          <button onClick={() => { router.invalidate(); reset(); }} className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">Tentar novamente</button>
-          <a href="/" className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent">Voltar ao início</a>
-        </div>
-      </div>
-    </div>
-  );
-}
+function NotFoundComponent() { return <div className="flex min-h-screen items-center justify-center bg-background px-4"><div className="max-w-md text-center"><h1 className="text-7xl font-bold text-foreground">404</h1><h2 className="mt-4 text-xl font-semibold text-foreground">Página não encontrada</h2><p className="mt-2 text-sm text-muted-foreground">A página solicitada não existe ou foi movida.</p><div className="mt-6"><Link to="/" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">Voltar ao início</Link></div></div></div>; }
+function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) { const router = useRouter(); const [supportError] = useState<SupportError>(() => normalizeSupportError(error, "route_error", "Não foi possível carregar esta página.")); useEffect(() => { reportLovableError(error, { boundary: "tanstack_root_error_component", supportReference: supportError.reference, supportCode: supportError.code }); }, [error, supportError]); return <div className="flex min-h-screen items-center justify-center bg-background px-4"><div className="w-full max-w-lg rounded-2xl border border-border/70 bg-card p-6 shadow-xl sm:p-8"><div className="text-xs font-semibold uppercase tracking-[0.16em] text-destructive">Erro da aplicação</div><h1 className="mt-2 text-xl font-semibold tracking-tight text-foreground">Não foi possível carregar a página</h1><p className="mt-2 text-sm text-muted-foreground">{supportError.userMessage}</p><div className="mt-5 rounded-lg border border-border/70 bg-muted/30 p-3 text-xs"><div className="font-semibold text-foreground">Informações para o suporte</div><div className="mt-2 grid gap-1 text-muted-foreground"><span>Referência: <strong className="text-foreground">{supportError.reference}</strong></span><span>Código: <strong className="text-foreground">{supportError.code}</strong></span><span>Operação: <strong className="text-foreground">{supportError.operation}</strong></span></div><details className="mt-3"><summary className="cursor-pointer font-medium text-foreground">Detalhes técnicos</summary><p className="mt-2 break-words leading-5 text-muted-foreground">{supportError.supportMessage}</p></details></div><div className="mt-6 flex flex-wrap gap-2"><button onClick={() => { router.invalidate(); reset(); }} className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">Tentar novamente</button><a href="/" className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent">Voltar ao início</a></div></div></div>; }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ location }) => {
     if (!supabaseConfigured || location.pathname === "/login") return;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      throw redirect({ to: "/login", search: { redirect: location.href } as never });
-    }
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw redirect({ to: "/login", search: { redirect: location.href, reason: "session_check_failed" } as never });
+    if (!data.session) throw redirect({ to: "/login", search: { redirect: location.href } as never });
   },
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Supportech — Central de Suporte de TI" },
-      { name: "description", content: "Central de suporte, operações e ativos de TI." },
-      { name: "author", content: "Supportech" },
-      { property: "og:title", content: "Supportech — Central de Suporte de TI" },
-      { property: "og:description", content: "Central de suporte, operações e ativos de TI." },
-      { property: "og:type", content: "website" },
-    ],
-    links: [{ rel: "stylesheet", href: appCss }, { rel: "icon", href: "/favicon.ico", type: "image/x-icon" }],
-  }),
-  shellComponent: RootShell,
-  component: RootComponent,
-  notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent,
+  head: () => ({ meta: [{ charSet: "utf-8" }, { name: "viewport", content: "width=device-width, initial-scale=1" }, { title: "Supportech — Central de Suporte de TI" }, { name: "description", content: "Central de suporte, operações e ativos de TI." }, { name: "author", content: "Supportech" }, { property: "og:title", content: "Supportech — Central de Suporte de TI" }, { property: "og:description", content: "Central de suporte, operações e ativos de TI." }, { property: "og:type", content: "website" }], links: [{ rel: "stylesheet", href: appCss }, { rel: "icon", href: "/favicon.ico", type: "image/x-icon" }] }),
+  shellComponent: RootShell, component: RootComponent, notFoundComponent: NotFoundComponent, errorComponent: ErrorComponent,
 });
-
-function RootShell({ children }: { children: ReactNode }) {
-  return <html lang="pt-BR"><head><HeadContent /></head><body>{children}<Scripts /></body></html>;
-}
-
-function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
-  useEffect(() => installGlobalErrorHandlers(), []);
-  return <QueryClientProvider client={queryClient}><Outlet /></QueryClientProvider>;
-}
+function RootShell({ children }: { children: ReactNode }) { return <html lang="pt-BR"><head><HeadContent /></head><body>{children}<Scripts /></body></html>; }
+function RootComponent() { const { queryClient } = Route.useRouteContext(); useEffect(() => installGlobalErrorHandlers(), []); return <QueryClientProvider client={queryClient}><Outlet /></QueryClientProvider>; }
