@@ -3,140 +3,32 @@ import { normalizeSupportError } from "../error-handling";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 const EXPECTED_SUPABASE_HOST = "afylrvytkpmetzmeosvb.supabase.co";
-
-function throwRepositoryError(error: unknown, operation: string, fallback: string): never {
-  throw normalizeSupportError(error, operation, fallback);
-}
-
+function throwRepositoryError(error: unknown, operation: string, fallback: string): never { throw normalizeSupportError(error, operation, fallback); }
 function assertSupportechEnvironment(operation: string) {
-  const configuredUrl = import.meta.env["VITE_SUPABASE_URL"] as string | undefined;
-  let host = "não configurado";
+  const configuredUrl = import.meta.env["VITE_SUPABASE_URL"] as string | undefined; let host = "não configurado";
   try { if (configuredUrl) host = new URL(configuredUrl).host; } catch { host = "URL inválida"; }
-  if (host !== EXPECTED_SUPABASE_HOST) {
-    const error = new Error(`Projeto Supabase incorreto no ambiente do Supportech: ${host}`) as Error & { code: string; status?: number };
-    error.code = "SUPABASE_PROJECT_MISMATCH";
-    error.status = 503;
-    throwRepositoryError(error, operation, "O ambiente do Supportech está apontando para o projeto Supabase incorreto.");
-  }
+  if (host !== EXPECTED_SUPABASE_HOST) { const error = new Error(`Projeto Supabase incorreto no ambiente do Supportech: ${host}`) as Error & { code: string; status?: number }; error.code = "SUPABASE_PROJECT_MISMATCH"; error.status = 503; throwRepositoryError(error, operation, "O ambiente do Supportech está apontando para o projeto Supabase incorreto."); }
 }
-
-async function assertAuthenticated(operation: string) {
-  assertSupportechEnvironment(operation);
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throwRepositoryError(error, `${operation}.session`, "Não foi possível validar sua sessão.");
-  if (!data.session?.user) {
-    const error = new Error("Sessão autenticada não encontrada para executar a operação.") as Error & { code: string; status?: number };
-    error.code = "SESSION_MISSING";
-    error.status = 401;
-    throwRepositoryError(error, `${operation}.session`, "Sua sessão não está ativa. Entre novamente no sistema.");
-  }
-  return data.session;
-}
-
-export async function getActiveCategories() {
-  const { data, error } = await supabase.from("ticket_categories").select("*").eq("is_active", true).order("name");
-  if (error) throwRepositoryError(error, "catalog.categories.list", "Não foi possível carregar as categorias.");
-  return data;
-}
-
-export async function getActiveServices() {
-  const { data, error } = await supabase.from("service_catalog").select("*").eq("is_active", true).order("name");
-  if (error) throwRepositoryError(error, "catalog.services.list", "Não foi possível carregar os serviços.");
-  return data;
-}
-
-export async function getActiveDepartments() {
-  const { data, error } = await supabase.from("departments").select("id, name, code").eq("is_active", true).order("name");
-  if (error) throwRepositoryError(error, "catalog.departments.list", "Não foi possível carregar os setores.");
-  return data;
-}
-
-export async function getMyProfile() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data, error } = await supabase.from("profiles").select("*, roles(*), departments(*)").eq("id", user.id).single();
-  if (error) throwRepositoryError(error, "profile.get_current", "Não foi possível carregar seu perfil de acesso.");
-  return data;
-}
-
-export async function createTicket(input: { subject: string; description: string; categoryId?: string; serviceId?: string; assetId?: string; departmentId: string; priority?: "baixa" | "media" | "alta" | "critica" }) {
-  await assertAuthenticated("tickets.create");
-  const { data, error } = await supabase.rpc("create_ticket" as never, { p_subject: input.subject, p_description: input.description, p_category_id: input.categoryId ?? null, p_service_id: input.serviceId ?? null, p_asset_id: input.assetId ?? null, p_priority: input.priority ?? null, p_department_id: input.departmentId } as never);
-  if (error) throwRepositoryError(error, "tickets.create", "Não foi possível abrir o chamado.");
-  return data;
-}
-
-export async function listMyTickets() {
-  await assertAuthenticated("tickets.list");
-  const { data, error } = await supabase.rpc("get_my_tickets" as never);
-  if (error) throwRepositoryError(error, "tickets.list", "Não foi possível carregar os chamados.");
-  return data;
-}
-
-export async function getTicket(ticketId: string) {
-  const { data, error } = await supabase.from("tickets").select("*").eq("id", ticketId).single();
-  if (error) throwRepositoryError(error, "tickets.get", "Não foi possível carregar o chamado.");
-  return data;
-}
-
-export async function getTicketDetails(ticketId: string) {
-  const { data, error } = await supabase.rpc("get_ticket_details" as never, { p_ticket_id: ticketId } as never);
-  if (error) throwRepositoryError(error, "tickets.details.get", "Não foi possível carregar os detalhes do chamado.");
-  return data as never;
-}
-
-export async function getSupportStaff() {
-  const profile = await getMyProfile();
-  const roles = profile?.roles as { key?: string } | { key?: string }[] | null | undefined;
-  const roleKey = Array.isArray(roles) ? roles[0]?.key : roles?.key;
-  if (!roleKey || roleKey === "requester") return [];
-  const { data, error } = await supabase.rpc("get_support_staff" as never);
-  if (error) throwRepositoryError(error, "staff.list", "Não foi possível carregar os técnicos e atendentes.");
-  return data;
-}
-
-export async function assignTicket(ticketId: string, assigneeId: string, note?: string) {
-  const { data, error } = await supabase.rpc("assign_ticket" as never, { p_ticket_id: ticketId, p_assignee_id: assigneeId, p_note: note ?? null } as never);
-  if (error) throwRepositoryError(error, "tickets.assign", "Não foi possível atribuir o chamado.");
-  return data;
-}
-
-export async function updateTicket(input: { ticketId: string; subject?: string; description?: string; categoryId?: string | null; serviceId?: string | null; priority?: "baixa" | "media" | "alta" | "critica" | null }) {
-  const { data, error } = await supabase.rpc("update_ticket" as never, { p_ticket_id: input.ticketId, p_subject: input.subject ?? null, p_description: input.description ?? null, p_category_id: input.categoryId ?? null, p_service_id: input.serviceId ?? null, p_priority: input.priority ?? null } as never);
-  if (error) throwRepositoryError(error, "tickets.update", "Não foi possível atualizar o chamado.");
-  return data;
-}
-
-export async function transitionTicket(ticketId: string, status: "novo" | "atribuido" | "em_atendimento" | "aguardando_usuario" | "resolvido" | "fechado") {
-  const { data, error } = await supabase.rpc("transition_ticket" as never, { p_ticket_id: ticketId, p_to_status: status } as never);
-  if (error) throwRepositoryError(error, "tickets.transition", "Não foi possível atualizar o status do chamado.");
-  return data;
-}
-
-export async function addTicketComment(ticketId: string, body: string, internal = false) {
-  const { data, error } = await supabase.rpc("add_ticket_comment" as never, { p_ticket_id: ticketId, p_body: body, p_is_internal: internal } as never);
-  if (error) throwRepositoryError(error, "tickets.comments.create", "Não foi possível registrar o comentário.");
-  return data;
-}
-
-export async function deleteTicketForTesting(ticketId: string) {
-  await assertAuthenticated("tickets.delete_testing");
-  const { data, error } = await supabase.rpc("delete_ticket_for_testing" as never, { p_ticket_id: ticketId } as never);
-  if (error) throwRepositoryError(error, "tickets.delete_testing", "Não foi possível excluir o chamado de teste.");
-  return data;
-}
-
-export function subscribeToTicketChanges(onChange: () => void, onError?: (message: string) => void): RealtimeChannel {
-  assertSupportechEnvironment("realtime.subscribe");
-  const channel = supabase.channel(`supportech-tickets-${crypto.randomUUID()}`);
-  channel
-    .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, onChange)
-    .on("postgres_changes", { event: "*", schema: "public", table: "ticket_assignments" }, onChange)
-    .on("postgres_changes", { event: "*", schema: "public", table: "ticket_comments" }, onChange)
-    .on("postgres_changes", { event: "*", schema: "public", table: "ticket_history" }, onChange)
-    .subscribe((status) => {
-      if (status === "CHANNEL_ERROR") onError?.("A atualização em tempo real do atendimento encontrou um erro de conexão.");
-      if (status === "TIMED_OUT") onError?.("A atualização em tempo real demorou para conectar.");
-    });
-  return channel;
-}
+async function assertAuthenticated(operation: string) { assertSupportechEnvironment(operation); const { data, error } = await supabase.auth.getSession(); if (error) throwRepositoryError(error, `${operation}.session`, "Não foi possível validar sua sessão."); if (!data.session?.user) { const error = new Error("Sessão autenticada não encontrada para executar a operação.") as Error & { code: string; status?: number }; error.code = "SESSION_MISSING"; error.status = 401; throwRepositoryError(error, `${operation}.session`, "Sua sessão não está ativa. Entre novamente no sistema."); } return data.session; }
+export async function getActiveCategories() { const { data, error } = await supabase.from("ticket_categories").select("*").eq("is_active", true).order("name"); if (error) throwRepositoryError(error, "catalog.categories.list", "Não foi possível carregar as categorias."); return data; }
+export async function getActiveServices() { const { data, error } = await supabase.from("service_catalog").select("*").eq("is_active", true).order("name"); if (error) throwRepositoryError(error, "catalog.services.list", "Não foi possível carregar os serviços."); return data; }
+export async function getActiveDepartments() { const { data, error } = await supabase.from("departments").select("id, name, code").eq("is_active", true).order("name"); if (error) throwRepositoryError(error, "catalog.departments.list", "Não foi possível carregar os setores."); return data; }
+export async function getMyProfile() { const { data: { user } } = await supabase.auth.getUser(); if (!user) return null; const { data, error } = await supabase.from("profiles").select("*, roles(*), departments(*)").eq("id", user.id).single(); if (error) throwRepositoryError(error, "profile.get_current", "Não foi possível carregar seu perfil de acesso."); return data; }
+export async function listProfiles() { await assertAuthenticated("users.list"); const { data, error } = await supabase.from("profiles").select("id, full_name, email, job_title, phone, is_active, last_seen_at, created_at, role_id, department_id, roles(key,name), departments(name,code)").order("full_name"); if (error) throwRepositoryError(error, "users.list", "Não foi possível carregar os usuários."); return data; }
+export async function updateProfileAdmin(input: { id: string; fullName?: string; email?: string | null; jobTitle?: string | null; phone?: string | null; roleId?: string; departmentId?: string | null; isActive?: boolean }) { await assertAuthenticated("users.update"); const { data, error } = await supabase.from("profiles").update({ full_name: input.fullName, email: input.email ?? null, job_title: input.jobTitle ?? null, phone: input.phone ?? null, role_id: input.roleId, department_id: input.departmentId ?? null, is_active: input.isActive }).eq("id", input.id).select().single(); if (error) throwRepositoryError(error, "users.update", "Não foi possível atualizar o usuário."); return data; }
+export async function getRoles() { await assertAuthenticated("users.roles.list"); const { data, error } = await supabase.from("roles").select("id,key,name,description,is_active").eq("is_active", true).order("name"); if (error) throwRepositoryError(error, "users.roles.list", "Não foi possível carregar os perfis de acesso."); return data; }
+export async function listAssets() { await assertAuthenticated("assets.list"); const { data, error } = await supabase.from("assets").select("id,asset_tag,name,asset_type,manufacturer,model,serial_number,status,location,notes,purchase_date,warranty_until,department_id,assigned_user_id,created_at,updated_at,departments(name,code),profiles!assets_assigned_user_id_fkey(id,full_name,email)").order("created_at", { ascending: false }); if (error) throwRepositoryError(error, "assets.list", "Não foi possível carregar os ativos."); return data; }
+export async function createAsset(input: { assetTag: string; name: string; assetType: string; manufacturer?: string; model?: string; serialNumber?: string; departmentId?: string; assignedUserId?: string; status?: "ativo"|"em_manutencao"|"inativo"|"baixado"; location?: string; notes?: string; purchaseDate?: string; warrantyUntil?: string }) { await assertAuthenticated("assets.create"); const { data, error } = await supabase.from("assets").insert({ asset_tag: input.assetTag.trim(), name: input.name.trim(), asset_type: input.assetType.trim(), manufacturer: input.manufacturer?.trim() || null, model: input.model?.trim() || null, serial_number: input.serialNumber?.trim() || null, department_id: input.departmentId || null, assigned_user_id: input.assignedUserId || null, status: input.status ?? "ativo", location: input.location?.trim() || null, notes: input.notes?.trim() || null, purchase_date: input.purchaseDate || null, warranty_until: input.warrantyUntil || null }).select().single(); if (error) throwRepositoryError(error, "assets.create", "Não foi possível cadastrar o ativo."); return data; }
+export async function updateAsset(input: { id: string; assetTag: string; name: string; assetType: string; manufacturer?: string; model?: string; serialNumber?: string; departmentId?: string; assignedUserId?: string; status: "ativo"|"em_manutencao"|"inativo"|"baixado"; location?: string; notes?: string; purchaseDate?: string; warrantyUntil?: string }) { await assertAuthenticated("assets.update"); const { data, error } = await supabase.from("assets").update({ asset_tag: input.assetTag.trim(), name: input.name.trim(), asset_type: input.assetType.trim(), manufacturer: input.manufacturer?.trim() || null, model: input.model?.trim() || null, serial_number: input.serialNumber?.trim() || null, department_id: input.departmentId || null, assigned_user_id: input.assignedUserId || null, status: input.status, location: input.location?.trim() || null, notes: input.notes?.trim() || null, purchase_date: input.purchaseDate || null, warranty_until: input.warrantyUntil || null }).eq("id", input.id).select().single(); if (error) throwRepositoryError(error, "assets.update", "Não foi possível atualizar o ativo."); return data; }
+export async function deleteAsset(id: string) { await assertAuthenticated("assets.delete"); const { error } = await supabase.from("assets").delete().eq("id", id); if (error) throwRepositoryError(error, "assets.delete", "Não foi possível excluir o ativo."); }
+export async function createTicket(input: { subject: string; description: string; categoryId?: string; serviceId?: string; assetId?: string; departmentId: string; priority?: "baixa" | "media" | "alta" | "critica" }) { await assertAuthenticated("tickets.create"); const { data, error } = await supabase.rpc("create_ticket" as never, { p_subject: input.subject, p_description: input.description, p_category_id: input.categoryId ?? null, p_service_id: input.serviceId ?? null, p_asset_id: input.assetId ?? null, p_priority: input.priority ?? null, p_department_id: input.departmentId } as never); if (error) throwRepositoryError(error, "tickets.create", "Não foi possível abrir o chamado."); return data; }
+export async function listMyTickets() { await assertAuthenticated("tickets.list"); const { data, error } = await supabase.rpc("get_my_tickets" as never); if (error) throwRepositoryError(error, "tickets.list", "Não foi possível carregar os chamados."); return data; }
+export async function getTicket(ticketId: string) { const { data, error } = await supabase.from("tickets").select("*").eq("id", ticketId).single(); if (error) throwRepositoryError(error, "tickets.get", "Não foi possível carregar o chamado."); return data; }
+export async function getTicketDetails(ticketId: string) { const { data, error } = await supabase.rpc("get_ticket_details" as never, { p_ticket_id: ticketId } as never); if (error) throwRepositoryError(error, "tickets.details.get", "Não foi possível carregar os detalhes do chamado."); return data as never; }
+export async function getSupportStaff() { const profile = await getMyProfile(); const roles = profile?.roles as { key?: string } | { key?: string }[] | null | undefined; const roleKey = Array.isArray(roles) ? roles[0]?.key : roles?.key; if (!roleKey || roleKey === "requester") return []; const { data, error } = await supabase.rpc("get_support_staff" as never); if (error) throwRepositoryError(error, "staff.list", "Não foi possível carregar os técnicos e atendentes."); return data; }
+export async function assignTicket(ticketId: string, assigneeId: string, note?: string) { const { data, error } = await supabase.rpc("assign_ticket" as never, { p_ticket_id: ticketId, p_assignee_id: assigneeId, p_note: note ?? null } as never); if (error) throwRepositoryError(error, "tickets.assign", "Não foi possível atribuir o chamado."); return data; }
+export async function updateTicket(input: { ticketId: string; subject?: string; description?: string; categoryId?: string | null; serviceId?: string | null; priority?: "baixa" | "media" | "alta" | "critica" | null }) { const { data, error } = await supabase.rpc("update_ticket" as never, { p_ticket_id: input.ticketId, p_subject: input.subject ?? null, p_description: input.description ?? null, p_category_id: input.categoryId ?? null, p_service_id: input.serviceId ?? null, p_priority: input.priority ?? null } as never); if (error) throwRepositoryError(error, "tickets.update", "Não foi possível atualizar o chamado."); return data; }
+export async function transitionTicket(ticketId: string, status: "novo" | "atribuido" | "em_atendimento" | "aguardando_usuario" | "resolvido" | "fechado") { const { data, error } = await supabase.rpc("transition_ticket" as never, { p_ticket_id: ticketId, p_to_status: status } as never); if (error) throwRepositoryError(error, "tickets.transition", "Não foi possível atualizar o status do chamado."); return data; }
+export async function addTicketComment(ticketId: string, body: string, internal = false) { const { data, error } = await supabase.rpc("add_ticket_comment" as never, { p_ticket_id: ticketId, p_body: body, p_is_internal: internal } as never); if (error) throwRepositoryError(error, "tickets.comments.create", "Não foi possível registrar o comentário."); return data; }
+export async function deleteTicketForTesting(ticketId: string) { await assertAuthenticated("tickets.delete_testing"); const { data, error } = await supabase.rpc("delete_ticket_for_testing" as never, { p_ticket_id: ticketId } as never); if (error) throwRepositoryError(error, "tickets.delete_testing", "Não foi possível excluir o chamado de teste."); return data; }
+export function subscribeToTicketChanges(onChange: () => void, onError?: (message: string) => void): RealtimeChannel { assertSupportechEnvironment("realtime.subscribe"); const channel = supabase.channel(`supportech-tickets-${crypto.randomUUID()}`); channel.on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, onChange).on("postgres_changes", { event: "*", schema: "public", table: "ticket_assignments" }, onChange).on("postgres_changes", { event: "postgres_changes" as never, schema: "public", table: "ticket_comments" }, onChange).on("postgres_changes", { event: "*", schema: "public", table: "ticket_history" }, onChange).subscribe((status) => { if (status === "CHANNEL_ERROR") onError?.("A atualização em tempo real do atendimento encontrou um erro de conexão."); if (status === "TIMED_OUT") onError?.("A atualização em tempo real demorou para conectar."); }); return channel; }
