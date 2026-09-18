@@ -5,9 +5,11 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 export default { fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
-  const { data: me } = await ctx.supabase.from("profiles").select("id,roles(key)").eq("id", ctx.userClaims?.sub).single();
+  const callerId = ctx.userClaims?.sub;
+  if (!callerId) return json({ error: "Sessão inválida.", code: "UNAUTHENTICATED" }, 401);
+  const { data: me } = await ctx.supabaseAdmin.from("profiles").select("id,is_active,roles(key)").eq("id", callerId).single();
   const myRole = Array.isArray(me?.roles) ? me.roles[0]?.key : (me?.roles as { key?: string } | null)?.key;
-  if (myRole !== "admin") return json({ error: "Apenas administradores podem alterar usuários.", code: "PERMISSION_DENIED" }, 403);
+  if (!me?.is_active || myRole !== "admin") return json({ error: "Apenas administradores podem alterar usuários.", code: "PERMISSION_DENIED" }, 403);
   const body = await req.json(), id = String(body.id ?? ""), fullName = String(body.fullName ?? "").trim();
   const email = body.email === undefined ? undefined : String(body.email ?? "").trim().toLowerCase(), roleId = body.roleId === undefined ? undefined : String(body.roleId ?? "");
   const departmentId = body.departmentId ? String(body.departmentId) : null, jobTitle = body.jobTitle === undefined ? undefined : (body.jobTitle ? String(body.jobTitle).trim() : null), phone = body.phone === undefined ? undefined : (body.phone ? String(body.phone).trim() : null), isActive = body.isActive === undefined ? undefined : Boolean(body.isActive);

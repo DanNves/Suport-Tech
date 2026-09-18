@@ -5,9 +5,11 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 export default { fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
-  const { data: me } = await ctx.supabase.from("profiles").select("id,roles(key)").eq("id", ctx.userClaims?.sub).single();
+  const callerId = ctx.userClaims?.sub;
+  if (!callerId) return json({ error: "Sessão inválida.", code: "UNAUTHENTICATED" }, 401);
+  const { data: me } = await ctx.supabaseAdmin.from("profiles").select("id,is_active,roles(key)").eq("id", callerId).single();
   const myRole = Array.isArray(me?.roles) ? me.roles[0]?.key : (me?.roles as { key?: string } | null)?.key;
-  if (myRole !== "admin") return json({ error: "Apenas administradores podem cadastrar usuários.", code: "PERMISSION_DENIED" }, 403);
+  if (!me?.is_active || myRole !== "admin") return json({ error: "Apenas administradores podem cadastrar usuários.", code: "PERMISSION_DENIED" }, 403);
   const body = await req.json();
   const fullName = String(body.fullName ?? "").trim(), email = String(body.email ?? "").trim().toLowerCase(), roleId = String(body.roleId ?? "");
   const departmentId = body.departmentId ? String(body.departmentId) : null, jobTitle = body.jobTitle ? String(body.jobTitle).trim() : null, phone = body.phone ? String(body.phone).trim() : null;

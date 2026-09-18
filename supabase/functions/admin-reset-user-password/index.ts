@@ -8,17 +8,20 @@ export default {
   fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
     if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
 
-    const { data: me, error: meError } = await ctx.supabase
+    const callerId = ctx.userClaims?.sub;
+    if (!callerId) return json({ error: "Sessão inválida.", code: "UNAUTHENTICATED" }, 401);
+
+    const { data: me, error: meError } = await ctx.supabaseAdmin
       .from("profiles")
-      .select("id,roles(key)")
-      .eq("id", ctx.userClaims?.sub)
+      .select("id,is_active,roles(key)")
+      .eq("id", callerId)
       .single();
 
     const myRole = Array.isArray(me?.roles)
       ? me.roles[0]?.key
       : (me?.roles as { key?: string } | null)?.key;
 
-    if (meError || myRole !== "admin") {
+    if (meError || !me?.is_active || myRole !== "admin") {
       return json({ error: "Apenas administradores podem redefinir senhas.", code: "PERMISSION_DENIED" }, 403);
     }
 

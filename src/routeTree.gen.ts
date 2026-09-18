@@ -10,23 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as GestaoRouteImport } from './routes/gestao'
 import { Route as AtivosRouteImport } from './routes/ativos'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as ChamadosRouteImport } from './routes/chamados'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ConhecimentoRouteImport } from './routes/conhecimento'
+import { Route as GestaoRouteImport } from './routes/gestao'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as UsuariosRouteImport } from './routes/usuarios'
 import { Route as ChamadosTicketIdRouteImport } from './routes/chamados/$ticketId'
 
-const GestaoRoute = GestaoRouteImport.update({
-  id: '/gestao',
-  path: '/gestao',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -55,6 +50,11 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
 const ConhecimentoRoute = ConhecimentoRouteImport.update({
   id: '/conhecimento',
   path: '/conhecimento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GestaoRoute = GestaoRouteImport.update({
+  id: '/gestao',
+  path: '/gestao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -88,9 +88,9 @@ export interface FileRoutesByFullPath {
   '/ativos': typeof AtivosRoute
   '/catalogo': typeof CatalogoRoute
   '/chamados': typeof ChamadosRouteWithChildren
-  '/gestao': typeof GestaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/conhecimento': typeof ConhecimentoRoute
+  '/gestao': typeof GestaoRoute
   '/login': typeof LoginRoute
   '/perfil': typeof PerfilRoute
   '/relatorios': typeof RelatoriosRoute
@@ -102,9 +102,9 @@ export interface FileRoutesByTo {
   '/ativos': typeof AtivosRoute
   '/catalogo': typeof CatalogoRoute
   '/chamados': typeof ChamadosRouteWithChildren
-  '/gestao': typeof GestaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/conhecimento': typeof ConhecimentoRoute
+  '/gestao': typeof GestaoRoute
   '/login': typeof LoginRoute
   '/perfil': typeof PerfilRoute
   '/relatorios': typeof RelatoriosRoute
@@ -114,12 +114,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/gestao': typeof GestaoRoute
   '/ativos': typeof AtivosRoute
   '/catalogo': typeof CatalogoRoute
   '/chamados': typeof ChamadosRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/conhecimento': typeof ConhecimentoRoute
+  '/gestao': typeof GestaoRoute
   '/login': typeof LoginRoute
   '/perfil': typeof PerfilRoute
   '/relatorios': typeof RelatoriosRoute
@@ -133,9 +133,9 @@ export interface FileRouteTypes {
     | '/ativos'
     | '/catalogo'
     | '/chamados'
-    | '/gestao'
     | '/configuracoes'
     | '/conhecimento'
+    | '/gestao'
     | '/login'
     | '/perfil'
     | '/relatorios'
@@ -147,9 +147,9 @@ export interface FileRouteTypes {
     | '/ativos'
     | '/catalogo'
     | '/chamados'
-    | '/gestao'
     | '/configuracoes'
     | '/conhecimento'
+    | '/gestao'
     | '/login'
     | '/perfil'
     | '/relatorios'
@@ -161,9 +161,9 @@ export interface FileRouteTypes {
     | '/ativos'
     | '/catalogo'
     | '/chamados'
-    | '/gestao'
     | '/configuracoes'
     | '/conhecimento'
+    | '/gestao'
     | '/login'
     | '/perfil'
     | '/relatorios'
@@ -173,12 +173,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  GestaoRoute: typeof GestaoRoute
   AtivosRoute: typeof AtivosRoute
   CatalogoRoute: typeof CatalogoRoute
   ChamadosRoute: typeof ChamadosRouteWithChildren
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   ConhecimentoRoute: typeof ConhecimentoRoute
+  GestaoRoute: typeof GestaoRoute
   LoginRoute: typeof LoginRoute
   PerfilRoute: typeof PerfilRoute
   RelatoriosRoute: typeof RelatoriosRoute
@@ -215,13 +215,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChamadosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/gestao': {
-      id: '/gestao'
-      path: '/gestao'
-      fullPath: '/gestao'
-      preLoaderRoute: typeof GestaoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/configuracoes': {
       id: '/configuracoes'
       path: '/configuracoes'
@@ -234,6 +227,13 @@ declare module '@tanstack/react-router' {
       path: '/conhecimento'
       fullPath: '/conhecimento'
       preLoaderRoute: typeof ConhecimentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gestao': {
+      id: '/gestao'
+      path: '/gestao'
+      fullPath: '/gestao'
+      preLoaderRoute: typeof GestaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -291,9 +291,9 @@ const rootRouteChildren: RootRouteChildren = {
   AtivosRoute: AtivosRoute,
   CatalogoRoute: CatalogoRoute,
   ChamadosRoute: ChamadosRouteWithChildren,
-  GestaoRoute: GestaoRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   ConhecimentoRoute: ConhecimentoRoute,
+  GestaoRoute: GestaoRoute,
   LoginRoute: LoginRoute,
   PerfilRoute: PerfilRoute,
   RelatoriosRoute: RelatoriosRoute,
