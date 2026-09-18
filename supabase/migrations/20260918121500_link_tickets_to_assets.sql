@@ -19,6 +19,10 @@ $$;
 CREATE INDEX IF NOT EXISTS idx_tickets_asset_id
   ON public.tickets(asset_id);
 
+REVOKE EXECUTE ON FUNCTION public.create_asset(text,text,text,text,text,text,uuid,uuid,public.asset_status,text,text,date,date) FROM anon, authenticated;
+
+DROP INDEX IF EXISTS public.uq_assets_asset_tag;
+
 CREATE OR REPLACE FUNCTION public.create_ticket(
   p_subject text,
   p_description text,
