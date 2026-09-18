@@ -13,16 +13,22 @@ export default {
 
     const { data: me, error: meError } = await ctx.supabaseAdmin
       .from("profiles")
-      .select("id,is_active,roles(key)")
+      .select("id,is_active,role_id")
       .eq("id", callerId)
-      .single();
+      .maybeSingle();
 
-    const myRole = Array.isArray(me?.roles)
-      ? me.roles[0]?.key
-      : (me?.roles as { key?: string } | null)?.key;
+    if (meError) return json({ error: `Não foi possível validar suas permissões: ${meError.message}`, code: "PROFILE_LOOKUP_FAILED" }, 500);
+    if (!me) return json({ error: "Seu usuário não possui perfil cadastrado.", code: "PROFILE_NOT_FOUND" }, 403);
+    if (!me.is_active) return json({ error: "Seu acesso está inativo.", code: "PROFILE_INACTIVE" }, 403);
 
-    if (meError || !me?.is_active || myRole !== "admin") {
-      return json({ error: "Apenas administradores podem redefinir senhas.", code: "PERMISSION_DENIED" }, 403);
+    let myRole: string | null = null;
+    if (me.role_id) {
+      const { data: myRoleRow } = await ctx.supabaseAdmin.from("roles").select("key").eq("id", me.role_id).maybeSingle();
+      myRole = myRoleRow?.key ? String(myRoleRow.key) : null;
+    }
+
+    if (myRole !== "admin") {
+      return json({ error: `Apenas administradores podem redefinir senhas. Seu perfil atual: ${myRole ?? "não definido"}.`, code: "PERMISSION_DENIED" }, 403);
     }
 
     const body = await req.json();
