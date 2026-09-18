@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase, supabaseConfigured } from "@/lib/supabase/client";
 
-type RoutePath = "/" | "/chamados" | "/ativos" | "/usuarios" | "/conhecimento" | "/relatorios" | "/catalogo" | "/configuracoes" | "/perfil";
+type RoutePath = "/" | "/chamados" | "/ativos" | "/usuarios" | "/conhecimento" | "/relatorios" | "/catalogo" | "/gestao" | "/configuracoes" | "/perfil";
 type NavItem = { label: string; icon: typeof LayoutDashboard; href: RoutePath };
 type AppShellProps = { children: ReactNode; title?: string; subtitle?: string };
 
@@ -20,6 +20,7 @@ const primaryNav: NavItem[] = [
 const managementNav: NavItem[] = [
   { label: "Relatórios", icon: Gauge, href: "/relatorios" },
   { label: "Catálogo de serviços", icon: Boxes, href: "/catalogo" },
+  { label: "Gestão", icon: ShieldCheck, href: "/gestao" },
   { label: "Configurações", icon: Settings, href: "/configuracoes" },
 ];
 
