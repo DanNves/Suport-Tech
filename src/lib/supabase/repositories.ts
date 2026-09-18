@@ -11,6 +11,17 @@ export async function getActiveDepartments() { const { data, error } = await sup
 export async function getMyProfile() { const { data: { user } } = await supabase.auth.getUser(); if (!user) return null; const { data, error } = await supabase.from("profiles").select("*,roles(*),departments(*)").eq("id", user.id).single(); if (error) throwRepositoryError(error, "profile.get_current", "Não foi possível carregar seu perfil de acesso."); return data as any; }
 export async function listProfiles() { await assertAuthenticated("users.list"); const { data, error } = await supabase.from("profiles").select("id,full_name,email,job_title,phone,is_active,last_seen_at,created_at,role_id,department_id,roles(key,name),departments(name,code)").order("full_name"); if (error) throwRepositoryError(error, "users.list", "Não foi possível carregar os usuários."); return data as any[]; }
 export async function createUserAdmin(input: { fullName: string; email: string; jobTitle?: string; phone?: string; roleId: string; departmentId?: string | null }) { await assertAuthenticated("users.create"); const { data, error } = await supabase.functions.invoke("admin-create-user", { body: input }); if (error) throwRepositoryError(error, "users.create", "Não foi possível cadastrar o usuário."); if ((data as any)?.error) { const e = Object.assign(new Error((data as any).error), { code: (data as any).code ?? "USER_CREATE_FAILED" }); throwRepositoryError(e, "users.create", "Não foi possível cadastrar o usuário."); } return data; }
+export async function resetUserPasswordAdmin(userId: string) {
+  await assertAuthenticated("users.password.reset");
+  const { data, error } = await supabase.functions.invoke("admin-reset-user-password", { body: { userId } });
+  if (error) throwRepositoryError(error, "users.password.reset", "Não foi possível enviar o link de redefinição.");
+  if ((data as any)?.error) {
+    const e = Object.assign(new Error((data as any).error), { code: (data as any).code ?? "PASSWORD_RESET_FAILED" });
+    throwRepositoryError(e, "users.password.reset", "Não foi possível enviar o link de redefinição.");
+  }
+  return data;
+}
+
 export async function updateProfileAdmin(input: { id: string; fullName?: string; email?: string | null; jobTitle?: string | null; phone?: string | null; roleId?: string; departmentId?: string | null; isActive?: boolean }) {
   await assertAuthenticated("users.update");
   const { data, error } = await supabase.functions.invoke("admin-update-user", { body: input });
