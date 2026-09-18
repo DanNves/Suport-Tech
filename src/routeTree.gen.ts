@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GestaoRouteImport } from './routes/gestao'
 import { Route as AtivosRouteImport } from './routes/ativos'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as ChamadosRouteImport } from './routes/chamados'
@@ -21,6 +22,11 @@ import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as UsuariosRouteImport } from './routes/usuarios'
 import { Route as ChamadosTicketIdRouteImport } from './routes/chamados/$ticketId'
 
+const GestaoRoute = GestaoRouteImport.update({
+  id: '/gestao',
+  path: '/gestao',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/ativos': typeof AtivosRoute
   '/catalogo': typeof CatalogoRoute
   '/chamados': typeof ChamadosRouteWithChildren
+  '/gestao': typeof GestaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/conhecimento': typeof ConhecimentoRoute
   '/login': typeof LoginRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/gestao': typeof GestaoRoute
   '/ativos': typeof AtivosRoute
   '/catalogo': typeof CatalogoRoute
   '/chamados': typeof ChamadosRouteWithChildren
@@ -124,6 +132,7 @@ export interface FileRouteTypes {
     | '/ativos'
     | '/catalogo'
     | '/chamados'
+    | '/gestao'
     | '/configuracoes'
     | '/conhecimento'
     | '/login'
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  GestaoRoute: typeof GestaoRoute
   AtivosRoute: typeof AtivosRoute
   CatalogoRoute: typeof CatalogoRoute
   ChamadosRoute: typeof ChamadosRouteWithChildren
@@ -200,6 +210,13 @@ declare module '@tanstack/react-router' {
       path: '/chamados'
       fullPath: '/chamados'
       preLoaderRoute: typeof ChamadosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gestao': {
+      id: '/gestao'
+      path: '/gestao'
+      fullPath: '/gestao'
+      preLoaderRoute: typeof GestaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/configuracoes': {
