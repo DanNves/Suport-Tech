@@ -291,6 +291,7 @@ const rootRouteChildren: RootRouteChildren = {
   AtivosRoute: AtivosRoute,
   CatalogoRoute: CatalogoRoute,
   ChamadosRoute: ChamadosRouteWithChildren,
+  GestaoRoute: GestaoRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   ConhecimentoRoute: ConhecimentoRoute,
   LoginRoute: LoginRoute,
