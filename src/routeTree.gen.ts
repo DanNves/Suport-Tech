@@ -102,6 +102,7 @@ export interface FileRoutesByTo {
   '/ativos': typeof AtivosRoute
   '/catalogo': typeof CatalogoRoute
   '/chamados': typeof ChamadosRouteWithChildren
+  '/gestao': typeof GestaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/conhecimento': typeof ConhecimentoRoute
   '/login': typeof LoginRoute
@@ -146,6 +147,7 @@ export interface FileRouteTypes {
     | '/ativos'
     | '/catalogo'
     | '/chamados'
+    | '/gestao'
     | '/configuracoes'
     | '/conhecimento'
     | '/login'
@@ -159,6 +161,7 @@ export interface FileRouteTypes {
     | '/ativos'
     | '/catalogo'
     | '/chamados'
+    | '/gestao'
     | '/configuracoes'
     | '/conhecimento'
     | '/login'
