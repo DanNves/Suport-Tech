@@ -13,17 +13,13 @@ export async function listProfiles() { await assertAuthenticated("users.list"); 
 export async function createUserAdmin(input: { fullName: string; email: string; jobTitle?: string; phone?: string; roleId: string; departmentId?: string | null }) { await assertAuthenticated("users.create"); const { data, error } = await supabase.functions.invoke("admin-create-user", { body: input }); if (error) throwRepositoryError(error, "users.create", "Não foi possível cadastrar o usuário."); if ((data as any)?.error) { const e = Object.assign(new Error((data as any).error), { code: (data as any).code ?? "USER_CREATE_FAILED" }); throwRepositoryError(e, "users.create", "Não foi possível cadastrar o usuário."); } return data; }
 export async function updateProfileAdmin(input: { id: string; fullName?: string; email?: string | null; jobTitle?: string | null; phone?: string | null; roleId?: string; departmentId?: string | null; isActive?: boolean }) {
   await assertAuthenticated("users.update");
-  const updateData: any = {};
-  if (input.fullName !== undefined) updateData.full_name = input.fullName;
-  if (input.email !== undefined) updateData.email = input.email ?? null;
-  if (input.jobTitle !== undefined) updateData.job_title = input.jobTitle ?? null;
-  if (input.phone !== undefined) updateData.phone = input.phone ?? null;
-  if (input.roleId !== undefined) updateData.role_id = input.roleId;
-  if (input.departmentId !== undefined) updateData.department_id = input.departmentId ?? null;
-  if (input.isActive !== undefined) updateData.is_active = input.isActive;
-  const { data, error } = await (supabase.from("profiles") as any).update(updateData).eq("id", input.id).select().single();
+  const { data, error } = await supabase.functions.invoke("admin-update-user", { body: input });
   if (error) throwRepositoryError(error, "users.update", "Não foi possível atualizar o usuário.");
-  return data as any;
+  if ((data as any)?.error) {
+    const e = Object.assign(new Error((data as any).error), { code: (data as any).code ?? "USER_UPDATE_FAILED" });
+    throwRepositoryError(e, "users.update", "Não foi possível atualizar o usuário.");
+  }
+  return (data as any)?.profile;
 }
 export async function listAllDepartments() { await assertAuthenticated("management.departments.list"); const { data, error } = await supabase.from("departments").select("id,name,code,description,is_active,created_at,updated_at").order("name"); if (error) throwRepositoryError(error, "management.departments.list", "Não foi possível carregar os setores."); return data as any[]; }
 export async function createDepartment(input: { name: string; code: string; description?: string }) { await assertAuthenticated("management.departments.create"); const payload = { name: input.name.trim(), code: input.code.trim().toUpperCase(), description: input.description?.trim() || null, is_active: true }; const { data, error } = await (supabase.from("departments") as any).insert(payload).select().single(); if (error) throwRepositoryError(error, "management.departments.create", "Não foi possível cadastrar o setor."); return data; }
