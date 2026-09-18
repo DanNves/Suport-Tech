@@ -19,11 +19,14 @@ function LoginPage() {
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState<SupportError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [setupMode, setSetupMode] = useState<"invite" | "recovery" | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
     let active = true;
     supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session) void navigate({ to: "/", replace: true });
+      if (active && data.session && !(type === "invite" || type === "recovery")) void navigate({ to: "/", replace: true });
       if (active) setChecking(false);
     }).catch((err) => {
       if (active) {
@@ -34,7 +37,7 @@ function LoginPage() {
     return () => { active = false; };
   }, [navigate]);
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
+  const setInitialPassword = async (event: FormEvent<HTMLFormElement>) => {\n    event.preventDefault();\n    if (!newPassword || newPassword.length < 8 || newPassword !== confirmPassword || loading) return;\n    setLoading(true); setError(null); setNotice(null);\n    try {\n      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });\n      if (updateError) throw updateError;\n      setNotice("Senha definida com sucesso. Seu acesso está pronto.");\n      setNewPassword(""); setConfirmPassword("");\n      await navigate({ to: "/", replace: true });\n    } catch (err) {\n      setError(normalizeSupportError(err, "auth.password.set", "Não foi possível definir a senha. Tente novamente."));\n    } finally { setLoading(false); }\n  };\n\n  const submit = async (event: FormEvent<HTMLFormElement>) =>
     event.preventDefault();
     if (!email.trim() || !password || loading || recovering) return;
     setLoading(true); setError(null); setNotice(null);
@@ -68,7 +71,7 @@ function LoginPage() {
       {!supabaseConfigured && <div className="mb-5 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>O ambiente de preview ainda não recebeu as variáveis do Supabase. Configure <strong>VITE_SUPABASE_URL</strong> e <strong>VITE_SUPABASE_ANON_KEY</strong> para habilitar o login.</span></div>}
       {error && <div className="mb-5 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><div className="flex gap-3"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><div className="min-w-0"><div>{error.userMessage}</div><div className="mt-2 text-[11px] text-destructive/80">Código: <strong>{error.code}</strong> · Referência: <strong>{error.reference}</strong></div><details className="mt-2 text-[11px]"><summary className="cursor-pointer font-medium">Detalhes para o suporte</summary><p className="mt-1 break-words">{error.supportMessage}</p></details></div></div></div>}
       {notice && <div className="mb-5 flex gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"><Mail className="mt-0.5 h-4 w-4 shrink-0" /><span>{notice}</span></div>}
-      <form className="space-y-4" onSubmit={submit}><div><label className="mb-1.5 block text-xs font-medium">E-mail</label><Input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@empresa.com" disabled={!supabaseConfigured || loading || recovering} /></div><div><label className="mb-1.5 block text-xs font-medium">Senha</label><div className="relative"><Input type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" disabled={!supabaseConfigured || loading || recovering} className="pr-10" /><button type="button" onClick={() => setShowPassword(v => !v)} disabled={!supabaseConfigured || loading || recovering} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} title={showPassword ? "Ocultar senha" : "Mostrar senha"}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div><Button className="w-full" type="submit" disabled={!supabaseConfigured || !email.trim() || !password || loading || recovering}>{loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Entrando...</> : <>Entrar <ArrowRight className="ml-2 h-4 w-4" /></>}</Button></form>
+      {setupMode ? setupForm : <form className="space-y-4" onSubmit={submit}><div><label className="mb-1.5 block text-xs font-medium">E-mail</label><Input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@empresa.com" disabled={!supabaseConfigured || loading || recovering} /></div><div><label className="mb-1.5 block text-xs font-medium">Senha</label><div className="relative"><Input type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" disabled={!supabaseConfigured || loading || recovering} className="pr-10" /><button type="button" onClick={() => setShowPassword(v => !v)} disabled={!supabaseConfigured || loading || recovering} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} title={showPassword ? "Ocultar senha" : "Mostrar senha"}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div><Button className="w-full" type="submit" disabled={!supabaseConfigured || !email.trim() || !password || loading || recovering}>{loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Entrando...</> : <>Entrar <ArrowRight className="ml-2 h-4 w-4" /></>}</Button></form>
       <div className="mt-4 border-t border-border/70 pt-4 text-center"><button type="button" onClick={() => void recoverPassword()} disabled={!supabaseConfigured || !email.trim() || loading || recovering} className="text-xs font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50">{recovering ? "Enviando instruções..." : "Esqueci minha senha"}</button><p className="mt-1 text-[11px] text-muted-foreground">Informe o e-mail acima para receber as instruções de recuperação.</p></div>
     </Card>
     <p className="mt-4 text-center text-[11px] text-muted-foreground">SuportTech · Ambiente de suporte e operações de TI</p>
