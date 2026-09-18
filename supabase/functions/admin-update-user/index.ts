@@ -7,9 +7,13 @@ export default { fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
   const callerId = ctx.userClaims?.sub;
   if (!callerId) return json({ error: "Sessão inválida.", code: "UNAUTHENTICATED" }, 401);
-  const { data: me } = await ctx.supabaseAdmin.from("profiles").select("id,is_active,roles(key)").eq("id", callerId).single();
-  const myRole = Array.isArray(me?.roles) ? me.roles[0]?.key : (me?.roles as { key?: string } | null)?.key;
-  if (!me?.is_active || myRole !== "admin") return json({ error: "Apenas administradores podem alterar usuários.", code: "PERMISSION_DENIED" }, 403);
+  const { data: me, error: meError } = await ctx.supabaseAdmin.from("profiles").select("id,is_active,role_id").eq("id", callerId).maybeSingle();
+  if (meError) return json({ error: `Não foi possível validar suas permissões: ${meError.message}`, code: "PROFILE_LOOKUP_FAILED" }, 500);
+  if (!me) return json({ error: "Seu usuário não possui perfil cadastrado.", code: "PROFILE_NOT_FOUND" }, 403);
+  if (!me.is_active) return json({ error: "Seu acesso está inativo.", code: "PROFILE_INACTIVE" }, 403);
+  let myRole: string | null = null;
+  if (me.role_id) { const { data: myRoleRow } = await ctx.supabaseAdmin.from("roles").select("key").eq("id", me.role_id).maybeSingle(); myRole = myRoleRow?.key ? String(myRoleRow.key) : null; }
+  if (myRole !== "admin") return json({ error: `Apenas administradores podem alterar usuários. Seu perfil atual: ${myRole ?? "não definido"}.`, code: "PERMISSION_DENIED" }, 403);
   const body = await req.json(), id = String(body.id ?? ""), fullName = String(body.fullName ?? "").trim();
   const email = body.email === undefined ? undefined : String(body.email ?? "").trim().toLowerCase(), roleId = body.roleId === undefined ? undefined : String(body.roleId ?? "");
   const departmentId = body.departmentId ? String(body.departmentId) : null, jobTitle = body.jobTitle === undefined ? undefined : (body.jobTitle ? String(body.jobTitle).trim() : null), phone = body.phone === undefined ? undefined : (body.phone ? String(body.phone).trim() : null), isActive = body.isActive === undefined ? undefined : Boolean(body.isActive);
