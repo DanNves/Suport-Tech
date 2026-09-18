@@ -11,8 +11,16 @@ export default { fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
   if (meError) return json({ error: `Não foi possível validar suas permissões: ${meError.message}`, code: "PROFILE_LOOKUP_FAILED" }, 500);
   if (!me) return json({ error: "Seu usuário não possui perfil cadastrado.", code: "PROFILE_NOT_FOUND" }, 403);
   if (!me.is_active) return json({ error: "Seu acesso está inativo.", code: "PROFILE_INACTIVE" }, 403);
-  let myRole: string | null = null;
-  if (me.role_id) { const { data: myRoleRow } = await ctx.supabaseAdmin.from("roles").select("key").eq("id", me.role_id).maybeSingle(); myRole = myRoleRow?.key ? String(myRoleRow.key) : null; }
+  if (!me.role_id) return json({ error: "Seu usuário não possui perfil de acesso definido.", code: "ROLE_NOT_FOUND" }, 403);
+  const { data: myRoleRow, error: roleError } = await ctx.supabaseAdmin
+    .from("roles")
+    .select("key,is_active")
+    .eq("id", me.role_id)
+    .maybeSingle();
+  if (roleError) return json({ error: `Não foi possível validar seu perfil de acesso: ${roleError.message}`, code: "ROLE_LOOKUP_FAILED" }, 500);
+  if (!myRoleRow) return json({ error: "Seu perfil de acesso não foi encontrado.", code: "ROLE_NOT_FOUND" }, 403);
+  if (!myRoleRow.is_active) return json({ error: "Seu perfil de acesso está inativo.", code: "ROLE_INACTIVE" }, 403);
+  const myRole = String(myRoleRow.key).trim().toLowerCase();
   if (myRole !== "admin") return json({ error: `Apenas administradores podem alterar usuários. Seu perfil atual: ${myRole ?? "não definido"}.`, code: "PERMISSION_DENIED" }, 403);
   const body = await req.json(), id = String(body.id ?? ""), fullName = String(body.fullName ?? "").trim();
   const email = body.email === undefined ? undefined : String(body.email ?? "").trim().toLowerCase(), roleId = body.roleId === undefined ? undefined : String(body.roleId ?? "");
