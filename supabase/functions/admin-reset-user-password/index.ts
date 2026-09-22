@@ -52,6 +52,16 @@ export default {
       return json({ error: "Não foi possível enviar o link de redefinição.", code: "PASSWORD_RESET_FAILED" }, 400);
     }
 
+    try {
+      await ctx.supabaseAdmin.from("audit_log").insert({
+        actor_id: callerId,
+        action: "user.password_reset_sent",
+        entity_type: "user",
+        entity_id: userId,
+        metadata: { email: target.email, full_name: target.full_name ?? null },
+      });
+    } catch { /* auditoria nunca quebra a operação principal */ }
+
     return json({ ok: true, message: "Link de redefinição enviado para o e-mail do usuário." });
   }),
 };

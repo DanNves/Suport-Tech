@@ -32,6 +32,34 @@ export async function updateProfileAdmin(input: { id: string; fullName?: string;
   }
   return (data as any)?.profile;
 }
+export async function resendUserInviteAdmin(userId: string) {
+  await assertAuthenticated("users.invite.resend");
+  const { data, error } = await supabase.functions.invoke("admin-create-user", { body: { action: "resend_invite", userId } });
+  if (error) throwRepositoryError(error, "users.invite.resend", "Não foi possível reenviar o convite.");
+  if ((data as any)?.error) {
+    const e = Object.assign(new Error((data as any).error), { code: (data as any).code ?? "INVITE_RESEND_FAILED" });
+    throwRepositoryError(e, "users.invite.resend", "Não foi possível reenviar o convite.");
+  }
+  return data;
+}
+
+export async function listAuditLog(filters?: { action?: string; entityType?: string; limit?: number }) {
+  await assertAuthenticated("audit.list");
+  let query = (supabase.from("audit_log") as any).select("id,actor_id,action,entity_type,entity_id,metadata,created_at").order("created_at", { ascending: false }).limit(Math.min(filters?.limit ?? 100, 200));
+  if (filters?.action) query = query.eq("action", filters.action);
+  if (filters?.entityType) query = query.eq("entity_type", filters.entityType);
+  const { data, error } = await query;
+  if (error) throwRepositoryError(error, "audit.list", "Não foi possível carregar a auditoria.");
+  const rows = (data ?? []) as any[];
+  const actorIds = Array.from(new Set(rows.map(r => r.actor_id).filter(Boolean)));
+  let actors: Record<string, string> = {};
+  if (actorIds.length > 0) {
+    const { data: profiles } = await (supabase.from("profiles") as any).select("id,full_name,email").in("id", actorIds);
+    actors = Object.fromEntries(((profiles ?? []) as any[]).map(p => [p.id, p.full_name ?? p.email ?? "—"]));
+  }
+  return rows.map(r => ({ ...r, actor_name: r.actor_id ? (actors[r.actor_id] ?? "Usuário removido") : "Sistema" }));
+}
+
 export async function listAllDepartments() { await assertAuthenticated("management.departments.list"); const { data, error } = await supabase.from("departments").select("id,name,code,description,is_active,created_at,updated_at").order("name"); if (error) throwRepositoryError(error, "management.departments.list", "Não foi possível carregar os setores."); return data as any[]; }
 export async function createDepartment(input: { name: string; code: string; description?: string }) { await assertAuthenticated("management.departments.create"); const payload = { name: input.name.trim(), code: input.code.trim().toUpperCase(), description: input.description?.trim() || null, is_active: true }; const { data, error } = await (supabase.from("departments") as any).insert(payload).select().single(); if (error) throwRepositoryError(error, "management.departments.create", "Não foi possível cadastrar o setor."); return data; }
 export async function updateDepartment(input: { id: string; name: string; code: string; description?: string; isActive: boolean }) { await assertAuthenticated("management.departments.update"); const payload = { name: input.name.trim(), code: input.code.trim().toUpperCase(), description: input.description?.trim() || null, is_active: input.isActive }; const { data, error } = await (supabase.from("departments") as any).update(payload).eq("id", input.id).select().single(); if (error) throwRepositoryError(error, "management.departments.update", "Não foi possível atualizar o setor."); return data; }

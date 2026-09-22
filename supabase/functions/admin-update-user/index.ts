@@ -38,5 +38,8 @@ export default { fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
   if (email !== undefined) updateData.email = email || null; if (jobTitle !== undefined) updateData.job_title = jobTitle; if (phone !== undefined) updateData.phone = phone; if (roleId !== undefined) updateData.role_id = roleId; if (body.departmentId !== undefined) updateData.department_id = departmentId; if (isActive !== undefined) updateData.is_active = isActive;
   const { data: updated, error: profileError } = await ctx.supabaseAdmin.from("profiles").update(updateData).eq("id", id).select().single();
   if (profileError) return json({ error: "A conta foi atualizada, mas o perfil não pôde ser sincronizado.", code: "PROFILE_UPDATE_FAILED" }, 500);
+  try {
+    await ctx.supabaseAdmin.from("audit_log").insert({ actor_id: callerId, action: "user.updated", entity_type: "user", entity_id: id, metadata: { changed_fields: Object.keys(updateData), full_name: fullName, is_active: isActive ?? null } });
+  } catch { /* auditoria nunca quebra a operação principal */ }
   return json({ ok: true, profile: updated });
 }) };
