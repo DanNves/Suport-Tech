@@ -1,12 +1,32 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Building2, Pencil, Plus, ShieldCheck, X } from "lucide-react";
+import { Building2, Pencil, Plus, ScrollText, ShieldCheck, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { listAllDepartments, createDepartment, updateDepartment, getRoles, getMyProfile } from "@/lib/supabase/repositories";
+import { listAllDepartments, createDepartment, updateDepartment, getRoles, getMyProfile, listAuditLog } from "@/lib/supabase/repositories";
+
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  "user.created": "Usuário cadastrado",
+  "user.updated": "Usuário atualizado",
+  "user.password_reset_sent": "Redefinição de senha enviada",
+  "user.invite_resent": "Convite reenviado",
+  "department.created": "Setor cadastrado",
+  "department.updated": "Setor atualizado",
+};
+
+const AUDIT_ENTITY_LABELS: Record<string, string> = { user: "Usuário", department: "Setor" };
+
+function auditSummary(metadata: any) {
+  if (!metadata || typeof metadata !== "object") return "—";
+  const parts = Object.entries(metadata)
+    .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")
+    .slice(0, 4)
+    .map(([k, v]) => `${k}: ${String(v)}`);
+  return parts.length > 0 ? parts.join(" · ") : "—";
+}
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/gestao")({ component: GestaoPage });
@@ -19,6 +39,10 @@ function GestaoPage() {
   const [editing, setEditing] = useState<any | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", description: "", isActive: true });
+  const [audit, setAudit] = useState<any[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditAction, setAuditAction] = useState("");
+  const [auditEntity, setAuditEntity] = useState("");
 
   const load = async () => {
     try {
@@ -37,6 +61,20 @@ function GestaoPage() {
   };
 
   useEffect(() => { void load(); }, []);
+
+  const loadAudit = async () => {
+    try {
+      setAuditLoading(true);
+      const rows = await listAuditLog({ ...(auditAction ? { action: auditAction } : {}), ...(auditEntity ? { entityType: auditEntity } : {}), limit: 100 });
+      setAudit(rows ?? []);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Não foi possível carregar a auditoria.");
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+  useEffect(() => { if (canManage) void loadAudit(); }, [canManage, auditAction, auditEntity]);
 
   const openCreate = () => {
     setEditing(null);
