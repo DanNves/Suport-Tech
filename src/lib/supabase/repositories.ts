@@ -64,7 +64,7 @@ export async function listAllDepartments() { await assertAuthenticated("manageme
 export async function createDepartment(input: { name: string; code: string; description?: string }) { await assertAuthenticated("management.departments.create"); const payload = { name: input.name.trim(), code: input.code.trim().toUpperCase(), description: input.description?.trim() || null, is_active: true }; const { data, error } = await (supabase.from("departments") as any).insert(payload).select().single(); if (error) throwRepositoryError(error, "management.departments.create", "Não foi possível cadastrar o setor."); return data; }
 export async function updateDepartment(input: { id: string; name: string; code: string; description?: string; isActive: boolean }) { await assertAuthenticated("management.departments.update"); const payload = { name: input.name.trim(), code: input.code.trim().toUpperCase(), description: input.description?.trim() || null, is_active: input.isActive }; const { data, error } = await (supabase.from("departments") as any).update(payload).eq("id", input.id).select().single(); if (error) throwRepositoryError(error, "management.departments.update", "Não foi possível atualizar o setor."); return data; }
 export async function getRoles() { await assertAuthenticated("users.roles.list"); const { data, error } = await supabase.from("roles").select("id,key,name,description,is_active").eq("is_active", true).order("name"); if (error) throwRepositoryError(error, "users.roles.list", "Não foi possível carregar os perfis de acesso."); return data; }
-export async function listAssets() { await assertAuthenticated("assets.list"); const { data, error } = await supabase.from("assets").select("id,asset_tag,name,asset_type,manufacturer,model,serial_number,status,location,notes,purchase_date,warranty_until,department_id,assigned_user_id,created_at,updated_at,departments(name,code),profiles!assets_assigned_user_id_fkey(id,full_name,email)").order("created_at", { ascending: false }); if (error) throwRepositoryError(error, "assets.list", "Não foi possível carregar os ativos."); return data as any[]; }
+export async function listAssets() { await assertAuthenticated("assets.list"); const { data, error } = await supabase.from("assets").select("id,asset_tag,name,asset_type,manufacturer,model,serial_number,status,location,notes,warranty_until,department_id,assigned_user_id,created_at,updated_at,departments(name,code),profiles!assets_assigned_user_id_fkey(id,full_name,email)").order("created_at", { ascending: false }); if (error) throwRepositoryError(error, "assets.list", "Não foi possível carregar os ativos."); return data as any[]; }
 export async function listTicketAssets() {
   await assertAuthenticated("assets.ticket_list");
   const { data, error } = await supabase
@@ -75,10 +75,9 @@ export async function listTicketAssets() {
   if (error) throwRepositoryError(error, "assets.ticket_list", "Não foi possível carregar os ativos para o chamado.");
   return data as any[];
 }
-export async function createAsset(input: { assetTag: string; name: string; assetType: string; manufacturer?: string; model?: string; serialNumber?: string; departmentId?: string; assignedUserId?: string; status: "ativo" | "em_manutencao" | "inativo" | "baixado"; location?: string; notes?: string; purchaseDate?: string; warrantyUntil?: string }) {
+export async function createAsset(input: { name: string; assetType: string; manufacturer?: string; model?: string; serialNumber?: string; departmentId?: string; assignedUserId?: string; status: "ativo" | "em_manutencao" | "inativo" | "baixado"; location?: string; notes?: string; warrantyUntil?: string }) {
   await assertAuthenticated("assets.create");
   const payload = {
-    asset_tag: input.assetTag.trim(),
     name: input.name.trim(),
     asset_type: input.assetType.trim(),
     manufacturer: input.manufacturer?.trim() || null,
@@ -89,7 +88,6 @@ export async function createAsset(input: { assetTag: string; name: string; asset
     status: input.status,
     location: input.location?.trim() || null,
     notes: input.notes?.trim() || null,
-    purchase_date: toIsoDate(input.purchaseDate),
     warranty_until: toIsoDate(input.warrantyUntil),
   };
   const { data, error } = await (supabase.from("assets") as any)
@@ -99,7 +97,25 @@ export async function createAsset(input: { assetTag: string; name: string; asset
   if (!error) return data;
   throwRepositoryError(error, "assets.create", "Não foi possível cadastrar o ativo.");
 }
-export async function updateAsset(input: { id: string; assetTag: string; name: string; assetType: string; manufacturer?: string; model?: string; serialNumber?: string; departmentId?: string; assignedUserId?: string; status: "ativo" | "em_manutencao" | "inativo" | "baixado"; location?: string; notes?: string; purchaseDate?: string; warrantyUntil?: string }) { await assertAuthenticated("assets.update"); const { data, error } = await (supabase.rpc as any)("update_asset", { p_id: input.id, p_asset_tag: input.assetTag, p_name: input.name, p_asset_type: input.assetType, p_manufacturer: input.manufacturer || null, p_model: input.model || null, p_serial_number: input.serialNumber || null, p_department_id: input.departmentId || null, p_assigned_user_id: input.assignedUserId || null, p_status: input.status, p_location: input.location || null, p_notes: input.notes || null, p_purchase_date: toIsoDate(input.purchaseDate), p_warranty_until: toIsoDate(input.warrantyUntil) }); if (error) throwRepositoryError(error, "assets.update", "Não foi possível atualizar o ativo."); return data; }
+export async function updateAsset(input: { id: string; name: string; assetType: string; manufacturer?: string; model?: string; serialNumber?: string; departmentId?: string; assignedUserId?: string; status: "ativo" | "em_manutencao" | "inativo" | "baixado"; location?: string; notes?: string; warrantyUntil?: string }) {
+  await assertAuthenticated("assets.update");
+  const { data, error } = await (supabase.rpc as any)("update_asset_v2", {
+    p_id: input.id,
+    p_name: input.name,
+    p_asset_type: input.assetType,
+    p_manufacturer: input.manufacturer || null,
+    p_model: input.model || null,
+    p_serial_number: input.serialNumber || null,
+    p_department_id: input.departmentId || null,
+    p_assigned_user_id: input.assignedUserId || null,
+    p_status: input.status,
+    p_location: input.location || null,
+    p_notes: input.notes || null,
+    p_warranty_until: toIsoDate(input.warrantyUntil),
+  });
+  if (error) throwRepositoryError(error, "assets.update", "Não foi possível atualizar o ativo.");
+  return data;
+}
 export async function deleteAsset(id: string) { await assertAuthenticated("assets.delete"); const { data, error } = await (supabase.rpc as any)("delete_asset", { p_id: id }); if (error) throwRepositoryError(error, "assets.delete", "Não foi possível excluir o ativo."); return data; }
 export async function createTicket(input: { subject: string; description: string; categoryId?: string; serviceId?: string; assetId?: string; departmentId: string; priority?: "baixa" | "media" | "alta" | "critica" }) { await assertAuthenticated("tickets.create"); const { data, error } = await (supabase.rpc as any)("create_ticket", { p_subject: input.subject, p_description: input.description, p_category_id: input.categoryId ?? null, p_service_id: input.serviceId ?? null, p_asset_id: input.assetId ?? null, p_priority: input.priority ?? null, p_department_id: input.departmentId }); if (error) throwRepositoryError(error, "tickets.create", "Não foi possível abrir o chamado."); return data; }
 export async function listMyTickets() { await assertAuthenticated("tickets.list"); const { data, error } = await (supabase.rpc as any)("get_my_tickets"); if (error) throwRepositoryError(error, "tickets.list", "Não foi possível carregar os chamados."); return data; }
