@@ -32,15 +32,25 @@ export async function updateProfileAdmin(input: { id: string; fullName?: string;
   }
   return (data as any)?.profile;
 }
+const RESEND_FRIENDLY: Record<string, string> = {
+  NOT_ELIGIBLE: "Este usuário já confirmou o acesso. Use \"Enviar redefinição de senha\".",
+  INVITE_NOT_ELIGIBLE: "Este usuário já confirmou o acesso. Use \"Enviar redefinição de senha\".",
+  AUTH_EMAIL_RATE_LIMITED: "Limite de envio de e-mails atingido. Aguarde alguns minutos e tente novamente.",
+  RATE_LIMITED: "Um acesso já foi reenviado há poucos instantes. Aguarde para tentar novamente.",
+};
 export async function resendUserInviteAdmin(userId: string) {
   await assertAuthenticated("users.invite.resend");
   const { data, error } = await supabase.functions.invoke("admin-create-user", { body: { action: "resend_invite", userId } });
-  if (error) throwRepositoryError(error, "users.invite.resend", "Não foi possível reenviar o convite.");
-  if ((data as any)?.error) {
-    const e = Object.assign(new Error((data as any).error), { code: (data as any).code ?? "INVITE_RESEND_FAILED" });
-    throwRepositoryError(e, "users.invite.resend", "Não foi possível reenviar o convite.");
+  let payload: any = data;
+  if (error) {
+    try { payload = await (error as any)?.context?.json?.(); } catch { payload = null; }
+    if (!payload?.error) throwRepositoryError(error, "users.invite.resend", "Não foi possível reenviar o acesso.");
   }
-  return data;
+  if (payload?.error) {
+    const code = String(payload.code ?? "INVITE_RESEND_FAILED");
+    throw Object.assign(new Error(RESEND_FRIENDLY[code] ?? payload.error), { code });
+  }
+  return payload;
 }
 
 export async function listAuditLog(filters?: { action?: string; entityType?: string; limit?: number }) {
