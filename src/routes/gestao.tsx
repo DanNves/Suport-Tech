@@ -121,6 +121,36 @@ function GestaoPage() {
         </Card>
 
         <Card className="overflow-hidden"><div className="border-b p-4"><h2 className="font-semibold">Perfis de acesso</h2><p className="text-sm text-muted-foreground">Perfis ativos disponíveis para os usuários.</p></div><div className="divide-y">{roles.map(r => <div key={r.id} className="flex items-center justify-between p-4"><div><div className="font-medium">{r.name}</div><div className="text-xs text-muted-foreground">{r.description ?? "Perfil " + r.key}</div></div><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">{r.key}</span></div>)}</div></Card>
+
+        {canManage && (
+          <Card className="overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+              <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><ScrollText className="h-5 w-5" /></div><div><h2 className="font-semibold">Auditoria</h2><p className="text-sm text-muted-foreground">Últimas 100 ações administrativas registradas.</p></div></div>
+              <div className="flex flex-wrap gap-2">
+                <select aria-label="Filtrar por ação" className="h-10 rounded-md border bg-background px-3 text-sm" value={auditAction} onChange={e => setAuditAction(e.target.value)}>
+                  <option value="">Todas as ações</option>
+                  {Object.entries(AUDIT_ACTION_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+                <select aria-label="Filtrar por tipo" className="h-10 rounded-md border bg-background px-3 text-sm" value={auditEntity} onChange={e => setAuditEntity(e.target.value)}>
+                  <option value="">Todos os tipos</option>
+                  {Object.entries(AUDIT_ENTITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+                <Button variant="outline" onClick={() => void loadAudit()}>Atualizar</Button>
+              </div>
+            </div>
+            <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="p-3">Data/hora</th><th className="p-3">Administrador</th><th className="p-3">Ação</th><th className="p-3">Entidade</th><th className="p-3">Resumo</th></tr></thead>
+              <tbody>{auditLoading ? <tr><td colSpan={5} className="p-10 text-center text-muted-foreground">Carregando auditoria...</td></tr> : audit.length === 0 ? <tr><td colSpan={5} className="p-10 text-center text-muted-foreground">Nenhum registro encontrado.</td></tr> : audit.map(a => (
+                <tr key={a.id} className="border-t hover:bg-muted/20">
+                  <td className="p-3 whitespace-nowrap text-xs">{a.created_at ? new Date(a.created_at).toLocaleString("pt-BR") : "—"}</td>
+                  <td className="p-3">{a.actor_name ?? a.actor?.full_name ?? a.actor?.email ?? "Sistema"}</td>
+                  <td className="p-3 font-medium">{AUDIT_ACTION_LABELS[a.action] ?? a.action}</td>
+                  <td className="p-3">{AUDIT_ENTITY_LABELS[a.entity_type] ?? a.entity_type ?? "—"}</td>
+                  <td className="p-3 max-w-md truncate text-xs text-muted-foreground" title={auditSummary(a.metadata)}>{auditSummary(a.metadata)}</td>
+                </tr>
+              ))}</tbody>
+            </table></div>
+          </Card>
+        )}
       </div>
 
       {open && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"><Card className="w-full max-w-lg p-5"><div className="mb-5 flex items-center justify-between"><div><h2 className="text-lg font-semibold">{editing ? "Editar setor" : "Novo setor"}</h2><p className="text-sm text-muted-foreground">Cadastre a área que será usada no atendimento.</p></div><Button variant="ghost" size="icon" onClick={() => setOpen(false)}><X /></Button></div><div className="space-y-4"><div><Label>Nome *</Label><Input className="mt-1.5" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div><div><Label>Código *</Label><Input className="mt-1.5" maxLength={10} value={form.code} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} /></div><div><Label>Descrição</Label><Input className="mt-1.5" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>{editing && <div><Label>Status</Label><select className="mt-1.5 h-10 w-full rounded-md border bg-background px-3 text-sm" value={form.isActive ? "ativo" : "inativo"} onChange={e => setForm({ ...form, isActive: e.target.value === "ativo" })}><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div>}</div><div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button><Button onClick={() => void save()}>{editing ? "Salvar alterações" : "Cadastrar setor"}</Button></div></Card></div>}
