@@ -85,6 +85,14 @@ export async function getMyPermissions() {
   return ((data ?? []) as any[]).map((row) => row?.permissions?.key).filter(Boolean) as string[];
 }
 
+export async function getPermissions() {
+  await assertAuthenticated("permissions.list");
+  const { data, error } = await (supabase.from("permissions") as any)
+    .select("id,key,name,description")
+    .order("key");
+  if (error) throwRepositoryError(error, "permissions.list", "Não foi possível carregar o catálogo de permissões.");
+  return (data ?? []) as any[];
+}
 export async function getAccessMatrix() {
   await assertAuthenticated("permissions.matrix.list");
   const { data, error } = await (supabase.from("role_permissions") as any)
