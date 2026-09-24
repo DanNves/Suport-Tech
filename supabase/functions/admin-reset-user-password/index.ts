@@ -44,7 +44,7 @@ export default {
       : origin && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\\d+)?$/i.test(origin)
         ? origin
         : PRODUCTION_APP_URL;
-    const redirectTo = `${base}/login`;
+    const redirectTo = `${base}/auth/confirm`;
 
     const { error: resetError } = await ctx.supabase.auth.resetPasswordForEmail(target.email, { redirectTo });
 
