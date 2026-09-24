@@ -10,11 +10,19 @@ const json = (body: unknown, status = 200) =>
 const SENSITIVE_KEYS = ["password", "senha", "token", "service_role", "apikey", "api_key", "secret"];
 const RESEND_WINDOW_SECONDS = 120;
 
+const PRODUCTION_APP_URL = "https://suporttech.lovable.app";
+
 function getAppRedirect(req: Request) {
   const configured = Deno.env.get("SUPPORTTECH_APP_URL")?.trim().replace(/\/$/, "");
   const origin = req.headers.get("origin")?.trim().replace(/\/$/, "");
-  const base = configured || origin;
-  return base ? `${base}/login` : null;
+
+  const candidate = configured && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\\d+)?$/i.test(configured)
+    ? configured
+    : origin && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\\d+)?$/i.test(origin)
+      ? origin
+      : PRODUCTION_APP_URL;
+
+  return `${candidate}/login`;
 }
 
 function sanitize(metadata: Record<string, unknown>): Record<string, unknown> {
