@@ -74,6 +74,38 @@ export async function listAuditLog(filters?: { action?: string; entityType?: str
 export async function listAllDepartments() { await assertAuthenticated("management.departments.list"); const { data, error } = await supabase.from("departments").select("id,name,code,description,is_active,created_at,updated_at").order("name"); if (error) throwRepositoryError(error, "management.departments.list", "Não foi possível carregar os setores."); return data as any[]; }
 export async function createDepartment(input: { name: string; code: string; description?: string }) { await assertAuthenticated("management.departments.create"); const payload = { name: input.name.trim(), code: input.code.trim().toUpperCase(), description: input.description?.trim() || null, is_active: true }; const { data, error } = await (supabase.from("departments") as any).insert(payload).select().single(); if (error) throwRepositoryError(error, "management.departments.create", "Não foi possível cadastrar o setor."); return data; }
 export async function updateDepartment(input: { id: string; name: string; code: string; description?: string; isActive: boolean }) { await assertAuthenticated("management.departments.update"); const payload = { name: input.name.trim(), code: input.code.trim().toUpperCase(), description: input.description?.trim() || null, is_active: input.isActive }; const { data, error } = await (supabase.from("departments") as any).update(payload).eq("id", input.id).select().single(); if (error) throwRepositoryError(error, "management.departments.update", "Não foi possível atualizar o setor."); return data; }
+export async function getMyPermissions() {
+  await assertAuthenticated("permissions.current");
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await (supabase.from("role_permissions") as any)
+    .select("permissions(key)")
+    .eq("role_id", (await supabase.from("profiles").select("role_id").eq("id", user.id).single()).data?.role_id);
+  if (error) throwRepositoryError(error, "permissions.current", "Não foi possível carregar suas permissões.");
+  return ((data ?? []) as any[]).map((row) => row?.permissions?.key).filter(Boolean) as string[];
+}
+
+export async function getAccessMatrix() {
+  await assertAuthenticated("permissions.matrix.list");
+  const { data, error } = await (supabase.from("role_permissions") as any)
+    .select("role_id,permission_id,roles(id,key,name,description,is_active),permissions(id,key,name,description)")
+    .order("role_id");
+  if (error) throwRepositoryError(error, "permissions.matrix.list", "Não foi possível carregar as permissões dos perfis.");
+  return (data ?? []) as any[];
+}
+
+export async function updateRolePermissionsAdmin(roleId: string, permissionKeys: string[]) {
+  await assertAuthenticated("permissions.matrix.update");
+  const { data, error } = await supabase.functions.invoke("admin-update-role-permissions", {
+    body: { roleId, permissionKeys },
+  });
+  if (error) throwRepositoryError(error, "permissions.matrix.update", "Não foi possível atualizar as permissões do perfil.");
+  if ((data as any)?.error) {
+    const e = Object.assign(new Error((data as any).error), { code: (data as any).code ?? "ROLE_PERMISSIONS_UPDATE_FAILED" });
+    throwRepositoryError(e, "permissions.matrix.update", "Não foi possível atualizar as permissões do perfil.");
+  }
+  return data;
+}
 export async function getAppSettings() {
   await assertAuthenticated("settings.list");
   const { data, error } = await supabase
