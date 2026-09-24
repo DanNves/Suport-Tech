@@ -166,7 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth/confirm'
     | '/alterar-senha'
-    | '/ativos
+    | '/ativos'
     | '/catalogo'
     | '/chamados'
     | '/configuracoes'
@@ -180,6 +180,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/auth/confirm'
+    | '/alterar-senha'
     | '/ativos'
     | '/catalogo'
     | '/chamados'
