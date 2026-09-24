@@ -12,7 +12,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ location }) => {
-    if (!supabaseConfigured || location.pathname === "/login") return;
+    if (
+      !supabaseConfigured ||
+      location.pathname === "/login" ||
+      location.pathname === "/auth/confirm" ||
+      location.pathname === "/alterar-senha"
+    ) return;
     const { data, error } = await supabase.auth.getSession();
     if (error) throw redirect({ to: "/login", search: { redirect: location.href, reason: "session_check_failed" } as never });
     if (!data.session) throw redirect({ to: "/login", search: { redirect: location.href } as never });
