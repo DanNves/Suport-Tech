@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase, supabaseConfigured } from "@/lib/supabase/client";
+import { getMyPermissions } from "@/lib/supabase/repositories";
+import { hasPermission, permissionForRoute } from "@/lib/access-control";
 
 type RoutePath = "/" | "/chamados" | "/ativos" | "/usuarios" | "/conhecimento" | "/relatorios" | "/catalogo" | "/gestao" | "/configuracoes" | "/perfil";
 type NavItem = { label: string; icon: typeof LayoutDashboard; href: RoutePath };
@@ -29,6 +31,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
   const [authChecking, setAuthChecking] = useState(supabaseConfigured);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [permissions, setPermissions] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
   const closeMobile = () => setSidebarOpen(false);
@@ -41,6 +44,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
       if (!active) return;
       if (!data.session) { await navigate({ to: "/login", replace: true }); return; }
       setUserEmail(data.session.user.email ?? null);
+      try { setPermissions(await getMyPermissions()); } catch { setPermissions([]); }
       setAuthChecking(false);
     };
     void check();
@@ -48,6 +52,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
       if (!active) return;
       if (!session) { void navigate({ to: "/login", replace: true }); return; }
       setUserEmail(session.user.email ?? null);
+      try { setPermissions(await getMyPermissions()); } catch { setPermissions([]); }
       setAuthChecking(false);
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
@@ -63,6 +68,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
 
   if (authChecking) return <div className="flex min-h-screen items-center justify-center bg-background"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
 
+  const canShowRoute = (href: string) => hasPermission(permissions, permissionForRoute(href));
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;
     const active = item.href === "/" ? location.pathname === "/" : location.pathname.startsWith(item.href);
@@ -72,7 +78,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
   return <div className="min-h-screen bg-background text-foreground">
     <aside className={cn("fixed inset-y-0 left-0 z-50 flex w-[264px] flex-col border-r border-border/80 bg-sidebar transition-transform duration-200 lg:translate-x-0", sidebarOpen ? "translate-x-0" : "-translate-x-full")}>
       <div className="flex h-20 shrink-0 items-center justify-between border-b border-sidebar-border px-5"><Link to="/" preload="intent" className="flex items-center gap-3" onClick={closeMobile}><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm"><LifeBuoy className="h-5 w-5" strokeWidth={2.2} /></div><div><div className="text-[15px] font-bold tracking-tight">SuportTech</div><div className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">IT Operations</div></div></Link><button className="rounded-lg p-2 text-muted-foreground hover:bg-sidebar-accent lg:hidden" onClick={closeMobile} aria-label="Fechar menu"><X className="h-5 w-5" /></button></div>
-      <div className="flex-1 overflow-y-auto px-3 py-5"><div className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Workspace</div><nav className="space-y-1">{primaryNav.map(renderNavItem)}</nav><div className="my-6 border-t border-sidebar-border" /><div className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Gestão</div><nav className="space-y-1">{managementNav.map(renderNavItem)}</nav></div>
+      <div className="flex-1 overflow-y-auto px-3 py-5"><div className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Workspace</div><nav className="space-y-1">{primaryNav.filter((item) => canShowRoute(item.href)).map(renderNavItem)}</nav><div className="my-6 border-t border-sidebar-border" /><div className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Gestão</div><nav className="space-y-1">{managementNav.filter((item) => canShowRoute(item.href)).map(renderNavItem)}</nav></div>
       <div className="shrink-0 border-t border-sidebar-border p-3"><div className="rounded-xl bg-sidebar-accent/70 p-3"><div className="mb-2 flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-background text-primary shadow-sm"><ShieldCheck className="h-4 w-4" /></span><div className="text-xs font-semibold">Ambiente protegido</div></div><div className="flex items-center gap-2 text-[11px] text-muted-foreground"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Serviços operacionais</div></div></div>
     </aside>
     {sidebarOpen && <button className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px] lg:hidden" onClick={closeMobile} aria-label="Fechar menu" />}
