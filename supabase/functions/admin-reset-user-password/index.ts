@@ -36,11 +36,16 @@ export default {
       return json({ error: "Usuário não possui e-mail válido para recuperação.", code: "USER_EMAIL_NOT_FOUND" }, 400);
     }
 
+    const PRODUCTION_APP_URL = "https://suporttech.lovable.app";
     const configured = Deno.env.get("SUPPORTTECH_APP_URL")?.trim().replace(/\/$/, "");
     const origin = req.headers.get("origin")?.trim().replace(/\/$/, "");
-    const base = configured || origin;
-    if (!base) return json({ error: "URL do sistema não configurada para recuperação de senha.", code: "APP_URL_NOT_CONFIGURED" }, 500);
+    const base = configured && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\\d+)?$/i.test(configured)
+      ? configured
+      : origin && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\\d+)?$/i.test(origin)
+        ? origin
+        : PRODUCTION_APP_URL;
     const redirectTo = `${base}/login`;
+
     const { error: resetError } = await ctx.supabase.auth.resetPasswordForEmail(target.email, { redirectTo });
 
     if (resetError) {
