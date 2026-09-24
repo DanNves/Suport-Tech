@@ -22,7 +22,7 @@ function getAppRedirect(req: Request) {
       ? origin
       : PRODUCTION_APP_URL;
 
-  return `${candidate}/login`;
+  return `${candidate}/login?type=invite`;
 }
 
 function sanitize(metadata: Record<string, unknown>): Record<string, unknown> {
