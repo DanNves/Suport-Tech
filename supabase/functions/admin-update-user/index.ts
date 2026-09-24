@@ -5,7 +5,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 export default { fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
-  const callerId = ctx.userClaims?.sub;
+  const callerId = ctx.userClaims?.id ?? ctx.jwtClaims?.sub;
   if (!callerId) return json({ error: "Sessão inválida.", code: "UNAUTHENTICATED" }, 401);
   const { data: me, error: meError } = await ctx.supabaseAdmin.from("profiles").select("id,is_active,role_id").eq("id", callerId).maybeSingle();
   if (meError) return json({ error: `Não foi possível validar suas permissões: ${meError.message}`, code: "PROFILE_LOOKUP_FAILED" }, 500);
