@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AtivosRouteImport } from './routes/ativos'
+import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as ChamadosRouteImport } from './routes/chamados'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
@@ -20,11 +21,22 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as UsuariosRouteImport } from './routes/usuarios'
+import { Route as AlterarSenhaRouteImport } from './routes/alterar-senha'
 import { Route as ChamadosTicketIdRouteImport } from './routes/chamados/$ticketId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthConfirmRoute = AuthConfirmRouteImport.update({
+  id: '/auth/confirm',
+  path: '/auth/confirm',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AlterarSenhaRoute = AlterarSenhaRouteImport.update({
+  id: '/alterar-senha',
+  path: '/alterar-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AtivosRoute = AtivosRouteImport.update({
@@ -85,6 +97,10 @@ const ChamadosTicketIdRoute = ChamadosTicketIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth/confirm': typeof AuthConfirmRoute
+  '/alterar-senha': typeof AlterarSenhaRoute
+  '/auth/confirm': typeof AuthConfirmRoute
+  '/alterar-senha': typeof AlterarSenhaRoute
   '/ativos': typeof AtivosRoute
   '/catalogo': typeof CatalogoRoute
   '/chamados': typeof ChamadosRouteWithChildren
@@ -130,6 +146,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth/confirm'
+    | '/alterar-senha'
     | '/ativos'
     | '/catalogo'
     | '/chamados'
@@ -173,6 +191,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthConfirmRoute: typeof AuthConfirmRoute
+  AlterarSenhaRoute: typeof AlterarSenhaRoute
   AtivosRoute: typeof AtivosRoute
   CatalogoRoute: typeof CatalogoRoute
   ChamadosRoute: typeof ChamadosRouteWithChildren
@@ -192,6 +212,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/confirm': {
+      id: '/auth/confirm'
+      path: '/auth/confirm'
+      fullPath: '/auth/confirm'
+      preLoaderRoute: typeof AuthConfirmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/alterar-senha': {
+      id: '/alterar-senha'
+      path: '/alterar-senha'
+      fullPath: '/alterar-senha'
+      preLoaderRoute: typeof AlterarSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ativos': {
@@ -288,6 +322,8 @@ const ChamadosRouteWithChildren = ChamadosRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthConfirmRoute: AuthConfirmRoute,
+  AlterarSenhaRoute: AlterarSenhaRoute,
   AtivosRoute: AtivosRoute,
   CatalogoRoute: CatalogoRoute,
   ChamadosRoute: ChamadosRouteWithChildren,
