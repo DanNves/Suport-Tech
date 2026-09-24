@@ -154,6 +154,19 @@ export async function updateAsset(input: { id: string; name: string; assetType: 
 }
 export async function deleteAsset(id: string) { await assertAuthenticated("assets.delete"); const { data, error } = await (supabase.rpc as any)("delete_asset", { p_id: id }); if (error) throwRepositoryError(error, "assets.delete", "Não foi possível excluir o ativo."); return data; }
 export async function createTicket(input: { subject: string; description: string; categoryId?: string; serviceId?: string; assetId?: string; departmentId: string; priority?: "baixa" | "media" | "alta" | "critica" }) { await assertAuthenticated("tickets.create"); const { data, error } = await (supabase.rpc as any)("create_ticket", { p_subject: input.subject, p_description: input.description, p_category_id: input.categoryId ?? null, p_service_id: input.serviceId ?? null, p_asset_id: input.assetId ?? null, p_priority: input.priority ?? null, p_department_id: input.departmentId }); if (error) throwRepositoryError(error, "tickets.create", "Não foi possível abrir o chamado."); return data; }
+export async function listOperationalReportTickets(startDate?: string, endDate?: string) {
+  await assertAuthenticated("reports.tickets.list");
+  let query = (supabase.from("tickets") as any)
+    .select("id,ticket_number,subject,status,priority,created_at,first_response_at,resolved_at,closed_at,response_due_at,resolution_due_at,sla_response_breached,sla_resolution_breached,department_id,departments(name,code)")
+    .order("created_at", { ascending: true })
+    .limit(5000);
+  if (startDate) query = query.gte("created_at", \`\${startDate}T00:00:00-03:00\`);
+  if (endDate) query = query.lt("created_at", \`\${endDate}T00:00:00-03:00\`);
+  const { data, error } = await query;
+  if (error) throwRepositoryError(error, "reports.tickets.list", "Não foi possível carregar os dados dos relatórios.");
+  return (data ?? []) as any[];
+}
+
 export async function listMyTickets() { await assertAuthenticated("tickets.list"); const { data, error } = await (supabase.rpc as any)("get_my_tickets"); if (error) throwRepositoryError(error, "tickets.list", "Não foi possível carregar os chamados."); return data; }
 export async function getTicket(ticketId: string) { const { data, error } = await supabase.from("tickets").select("*").eq("id", ticketId).single(); if (error) throwRepositoryError(error, "tickets.get", "Não foi possível carregar o chamado."); return data; }
 export async function getTicketDetails(ticketId: string) { const { data, error } = await (supabase.rpc as any)("get_ticket_details", { p_ticket_id: ticketId }); if (error) throwRepositoryError(error, "tickets.details.get", "Não foi possível carregar os detalhes do chamado."); return data; }
