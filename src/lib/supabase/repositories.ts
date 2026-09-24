@@ -33,10 +33,11 @@ export async function updateProfileAdmin(input: { id: string; fullName?: string;
   return (data as any)?.profile;
 }
 const RESEND_FRIENDLY: Record<string, string> = {
-  NOT_ELIGIBLE: "Este usuário já confirmou o acesso. Use \"Enviar redefinição de senha\".",
-  INVITE_NOT_ELIGIBLE: "Este usuário já confirmou o acesso. Use \"Enviar redefinição de senha\".",
+  NOT_ELIGIBLE: "Não foi possível localizar uma conta de autenticação válida para este usuário.",
+  INVITE_NOT_ELIGIBLE: "O acesso não pode ser reenviado para esta conta.",
   AUTH_EMAIL_RATE_LIMITED: "Limite de envio de e-mails atingido. Aguarde alguns minutos e tente novamente.",
   RATE_LIMITED: "Um acesso já foi reenviado há poucos instantes. Aguarde para tentar novamente.",
+  ACCESS_RESEND_FAILED: "Não foi possível reenviar o acesso por e-mail. Verifique a configuração de e-mail do projeto.",
 };
 export async function resendUserInviteAdmin(userId: string) {
   await assertAuthenticated("users.invite.resend");
