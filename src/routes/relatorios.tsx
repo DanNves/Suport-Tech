@@ -14,7 +14,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { listOperationalReportTickets } from "@/lib/supabase/repositories";
+import { getMyProfile, listOperationalReportTickets } from "@/lib/supabase/repositories";
 import { toast } from "sonner";
 
 type Period = "7" | "30" | "90" | "365" | "all";
@@ -82,10 +82,20 @@ function RelatoriosPage() {
   const [period, setPeriod] = useState<Period>("30");
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [allowed, setAllowed] = useState<boolean | null>(null);
 
   const load = async () => {
     try {
       setLoading(true);
+      const profile = await getMyProfile();
+      const role = profile?.roles as any;
+      const key = Array.isArray(role) ? role[0]?.key : role?.key;
+      const canView = ["admin", "manager", "technician", "agent", "auditor"].includes(String(key ?? "").toLowerCase());
+      setAllowed(canView);
+      if (!canView) {
+        setTickets([]);
+        return;
+      }
       const rows = await listOperationalReportTickets(startForPeriod(period), endTomorrow());
       setTickets(rows ?? []);
     } catch (error: any) {
@@ -201,6 +211,20 @@ function RelatoriosPage() {
     { label: "SLA comprometido", value: metrics.slaBreaches, icon: AlertTriangle, note: "resposta ou resolução" },
     { label: "Tempo médio de resposta", value: formatMinutes(metrics.avgResponse), icon: Clock3, note: "primeira interação" },
   ];
+
+  if (allowed === false) {
+    return (
+      <AppShell title="Relatórios" subtitle="Acompanhe indicadores, produtividade e desempenho da operação.">
+        <Card className="flex min-h-[360px] flex-col items-center justify-center p-8 text-center">
+          <AlertTriangle className="mb-4 h-10 w-10 text-amber-600" />
+          <h2 className="text-lg font-semibold">Acesso restrito</h2>
+          <p className="mt-1 max-w-md text-sm text-muted-foreground">
+            Os relatórios operacionais estão disponíveis apenas para perfis de atendimento e gestão.
+          </p>
+        </Card>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell title="Relatórios" subtitle="Acompanhe indicadores, produtividade e desempenho da operação.">
