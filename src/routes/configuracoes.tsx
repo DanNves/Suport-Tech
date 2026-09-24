@@ -4,12 +4,12 @@ import {
   Bell,
   Database,
   Globe2,
-  Palette,
   RefreshCw,
   Save,
   Server,
   ShieldCheck,
   Ticket,
+  Users,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { getAppSettings, getMyProfile, updateAppSetting } from "@/lib/supabase/repositories";
+import { getAccessMatrix, getAppSettings, getMyProfile, getPermissions, updateAppSetting, updateRolePermissionsAdmin } from "@/lib/supabase/repositories";
 import { toast } from "sonner";
 
-type TabKey = "geral" | "aparencia" | "notificacoes" | "chamados" | "seguranca";
+type TabKey = "geral" | "notificacoes" | "chamados" | "acessos" | "seguranca";
 type SettingsMap = Record<string, Record<string, any>>;
 
 const defaults: SettingsMap = {
@@ -32,11 +32,6 @@ const defaults: SettingsMap = {
     timezone: "America/Bahia",
     language: "pt-BR",
     maintenanceMode: false,
-  },
-  branding: {
-    primaryColor: "#3333c5",
-    primaryDark: "#232388",
-    primaryLight: "#6b6bd6",
   },
   preferences: {
     language: "pt-BR",
@@ -58,14 +53,26 @@ const defaults: SettingsMap = {
 
 const tabs: { key: TabKey; label: string; icon: typeof Globe2 }[] = [
   { key: "geral", label: "Geral", icon: Globe2 },
-  { key: "aparencia", label: "Aparência", icon: Palette },
   { key: "notificacoes", label: "Notificações", icon: Bell },
   { key: "chamados", label: "Chamados", icon: Ticket },
+  { key: "acessos", label: "Acessos", icon: Users },
   { key: "seguranca", label: "Segurança", icon: ShieldCheck },
 ];
 
 function cloneDefaults() {
   return JSON.parse(JSON.stringify(defaults)) as SettingsMap;
+}
+
+function buildAccessDraft(matrix: any[]) {
+  const draft: Record<string, string[]> = {};
+  for (const row of matrix ?? []) {
+    const roleKey = row?.roles?.key;
+    const permissionKey = row?.permissions?.key;
+    if (!roleKey || !permissionKey) continue;
+    draft[roleKey] = draft[roleKey] ?? [];
+    draft[roleKey].push(permissionKey);
+  }
+  return draft;
 }
 
 function mergeSettings(rows: any[]) {
@@ -90,11 +97,16 @@ function ConfiguracoesPage() {
   const [canManage, setCanManage] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [accessRows, setAccessRows] = useState<any[]>([]);
+  const [permissionCatalog, setPermissionCatalog] = useState<any[]>([]);
+  const [accessDraft, setAccessDraft] = useState<Record<string, string[]>>({});
+  const [accessDirty, setAccessDirty] = useState(false);
+  const [accessSaving, setAccessSaving] = useState(false);
 
   const load = async () => {
     try {
       setLoading(true);
-      const [rows, profile] = await Promise.all([getAppSettings(), getMyProfile()]);
+      const [rows, profile, matrix, permissions] = await Promise.all([getAppSettings(), getMyProfile(), getAccessMatrix(), getPermissions()]);
       setSettings(mergeSettings(rows ?? []));
       const role = profile?.roles as any;
       const key = Array.isArray(role) ? role[0]?.key : role?.key;
@@ -105,7 +117,11 @@ function ConfiguracoesPage() {
         .sort()
         .at(-1);
       setUpdatedAt(latest ?? null);
+      setAccessRows(matrix ?? []);
+      setPermissionCatalog(permissions ?? []);
+      setAccessDraft(buildAccessDraft(matrix ?? []));
       setDirty(false);
+      setAccessDirty(false);
     } catch (error: any) {
       toast.error(error?.message ?? "Não foi possível carregar as configurações.");
     } finally {
@@ -129,7 +145,7 @@ function ConfiguracoesPage() {
     if (!canManage || saving) return;
     setSaving(true);
     try {
-      for (const key of ["system", "branding", "preferences", "notifications", "tickets"]) {
+      for (const key of ["system", "preferences", "notifications", "tickets"]) {
         await updateAppSetting(key, settings[key] ?? {});
       }
       toast.success("Configurações salvas com sucesso.");
@@ -138,6 +154,36 @@ function ConfiguracoesPage() {
       toast.error(error?.message ?? "Não foi possível salvar as configurações.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const updatePermission = (roleKey: string, permissionKey: string, checked: boolean) => {
+    if (roleKey === "admin") return;
+    setAccessDraft((current) => {
+      const currentKeys = new Set(current[roleKey] ?? []);
+      if (checked) currentKeys.add(permissionKey); else currentKeys.delete(permissionKey);
+      return { ...current, [roleKey]: Array.from(currentKeys) };
+    });
+    setAccessDirty(true);
+  };
+
+  const saveAccess = async () => {
+    if (!canManage || accessSaving || !accessDirty) return;
+    setAccessSaving(true);
+    try {
+      const roleIds = new Map<string, string>();
+      for (const row of accessRows) if (row?.roles?.key && row?.roles?.id) roleIds.set(row.roles.key, row.roles.id);
+      const roleKeys = Array.from(new Set(accessRows.map((row) => row?.roles?.key).filter(Boolean))).filter((key) => key !== "admin");
+      for (const roleKey of roleKeys) {
+        const roleId = roleIds.get(roleKey);
+        if (roleId) await updateRolePermissionsAdmin(roleId, accessDraft[roleKey] ?? []);
+      }
+      toast.success("Permissões dos perfis atualizadas com sucesso.");
+      await load();
+    } catch (error: any) {
+      toast.error(error?.message ?? "Não foi possível salvar as permissões.");
+    } finally {
+      setAccessSaving(false);
     }
   };
 
@@ -161,7 +207,7 @@ function ConfiguracoesPage() {
     return (
       <AppShell
         title="Configurações"
-        subtitle="Administre preferências, identidade visual e regras operacionais do SuportTech."
+        subtitle="Administre o funcionamento, notificações, chamados e acessos do SuportTech."
       >
         <Card className="flex min-h-[420px] items-center justify-center">
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -176,7 +222,7 @@ function ConfiguracoesPage() {
   return (
     <AppShell
       title="Configurações"
-      subtitle="Administre preferências, identidade visual e regras operacionais do SuportTech."
+      subtitle="Administre o funcionamento, notificações, chamados e acessos do SuportTech."
     >
       <div className="space-y-5">
         <div className="grid gap-4 md:grid-cols-3">
@@ -358,68 +404,6 @@ function ConfiguracoesPage() {
               </section>
             )}
 
-            {tab === "aparencia" && (
-              <section className="space-y-6">
-                <div>
-                  <h2 className="text-base font-semibold">Identidade visual</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Cores-base utilizadas como referência visual do ambiente.
-                  </p>
-                </div>
-                <div className="grid gap-5 md:grid-cols-3">
-                  {[
-                    ["primaryColor", "Cor principal"],
-                    ["primaryDark", "Cor escura"],
-                    ["primaryLight", "Cor clara"],
-                  ].map(([key, label]) => (
-                    <div key={key} className="space-y-2">
-                      <Label>{label}</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          type="color"
-                          value={settings.branding?.[key] ?? "#3333c5"}
-                          onChange={(e) => update("branding", key, e.target.value)}
-                          disabled={!canManage}
-                          className="h-10 w-14 cursor-pointer p-1"
-                        />
-                        <Input
-                          value={settings.branding?.[key] ?? ""}
-                          onChange={(e) => update("branding", key, e.target.value)}
-                          disabled={!canManage}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="rounded-xl border p-5">
-                  <div className="mb-4 text-sm font-medium">Pré-visualização</div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div
-                      className="flex h-11 w-11 items-center justify-center rounded-xl text-white"
-                      style={{ backgroundColor: settings.branding?.primaryColor }}
-                    >
-                      ST
-                    </div>
-                    <Button style={{ backgroundColor: settings.branding?.primaryColor }}>
-                      Ação principal
-                    </Button>
-                    <span
-                      className="rounded-full px-3 py-1 text-xs font-medium text-white"
-                      style={{ backgroundColor: settings.branding?.primaryDark }}
-                    >
-                      SuportTech
-                    </span>
-                    <span
-                      className="rounded-full px-3 py-1 text-xs font-medium"
-                      style={{ backgroundColor: settings.branding?.primaryLight }}
-                    >
-                      Apoio
-                    </span>
-                  </div>
-                </div>
-              </section>
-            )}
-
             {tab === "notificacoes" && (
               <section className="space-y-4">
                 <div>
@@ -506,6 +490,55 @@ function ConfiguracoesPage() {
               </section>
             )}
 
+            {tab === "acessos" && (
+              <section className="space-y-6">
+                <div>
+                  <h2 className="text-base font-semibold">Perfis e permissões</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Defina quais recursos cada perfil pode acessar. O administrador permanece protegido com acesso total.
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  {Array.from(new Set(accessRows.map((row) => row?.roles?.key).filter(Boolean))).map((roleKey) => {
+                    const role = accessRows.find((row) => row?.roles?.key === roleKey)?.roles;
+                    const selected = new Set(accessDraft[roleKey] ?? []);
+                    const protectedRole = roleKey === "admin";
+                    return (
+                      <Card key={roleKey} className="overflow-hidden">
+                        <div className="flex items-center justify-between border-b p-4">
+                          <div>
+                            <div className="font-medium">{role?.name ?? roleKey}</div>
+                            <div className="text-xs text-muted-foreground">{role?.description ?? "Perfil de acesso"}</div>
+                          </div>
+                          <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium">{selected.size} permissões</span>
+                        </div>
+                        <div className="grid gap-2 p-4 md:grid-cols-2">
+                          {permissionCatalog.map((permission) => (
+                            <label key={permission.key} className={`flex items-start gap-3 rounded-lg border p-3 ${protectedRole ? "opacity-70" : "hover:bg-muted/30"}`}>
+                              <input
+                                type="checkbox"
+                                className="mt-0.5 h-4 w-4 accent-primary"
+                                checked={selected.has(permission.key)}
+                                disabled={protectedRole || !canManage}
+                                onChange={(event) => updatePermission(roleKey, permission.key, event.target.checked)}
+                              />
+                              <span className="min-w-0">
+                                <span className="block text-sm font-medium">{permission.name}</span>
+                                <span className="mt-0.5 block text-xs text-muted-foreground">{permission.description ?? permission.key}</span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+                <div className="rounded-xl border border-primary/15 bg-primary/5 p-4 text-sm text-muted-foreground">
+                  As permissões controlam a navegação e a proteção das rotas. A segurança dos dados continua sendo aplicada pelo Supabase.
+                </div>
+              </section>
+            )}
+
             {tab === "seguranca" && (
               <section className="space-y-6">
                 <div>
@@ -547,25 +580,32 @@ function ConfiguracoesPage() {
 
             <div className="mt-8 flex flex-col justify-between gap-3 border-t pt-5 sm:flex-row sm:items-center">
               <div className="text-xs text-muted-foreground">
-                {dirty
-                  ? "Há alterações não salvas."
-                  : updatedAt
-                    ? `Última atualização: ${new Date(updatedAt).toLocaleString("pt-BR")}`
-                    : "Configurações carregadas."}
+                {tab === "acessos"
+                  ? accessDirty ? "Há alterações de permissões não salvas." : "Permissões carregadas."
+                  : dirty
+                    ? "Há alterações não salvas."
+                    : updatedAt
+                      ? `Última atualização: ${new Date(updatedAt).toLocaleString("pt-BR")}`
+                      : "Configurações carregadas."}
               </div>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={restoreDefaults}
-                  disabled={!canManage || saving}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Restaurar padrão
-                </Button>
-                <Button onClick={() => void save()} disabled={!canManage || !dirty || saving}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {saving ? "Salvando..." : "Salvar configurações"}
-                </Button>
+                {tab === "acessos" ? (
+                  <Button onClick={() => void saveAccess()} disabled={!canManage || !accessDirty || accessSaving}>
+                    <Save className="mr-2 h-4 w-4" />
+                    {accessSaving ? "Salvando..." : "Salvar permissões"}
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={restoreDefaults} disabled={!canManage || saving}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Restaurar padrão
+                    </Button>
+                    <Button onClick={() => void save()} disabled={!canManage || !dirty || saving}>
+                      <Save className="mr-2 h-4 w-4" />
+                      {saving ? "Salvando..." : "Salvar configurações"}
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
