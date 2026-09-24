@@ -82,7 +82,7 @@ function LoginPage() {
     if (!email.trim() || recovering || loading) return;
     setRecovering(true); setError(null); setNotice(null);
     try {
-      const redirectTo = window.location.origin + "/login";
+      const redirectTo = "https://suporttech.lovable.app/login";
       const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
       if (authError) throw authError;
       setNotice("Se existir uma conta para este e-mail, enviaremos as instruções para redefinir a senha.");
