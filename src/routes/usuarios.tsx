@@ -18,7 +18,7 @@ function formatPhone(value: string) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
-=createFileRoute("/usuarios")({component:UsuariosPage});
+export const Route = createFileRoute("/usuarios")({component:UsuariosPage});
 function UsuariosPage(){const [users,setUsers]=useState<any[]>([]),[roles,setRoles]=useState<any[]>([]),[departments,setDepartments]=useState<any[]>([]),[query,setQuery]=useState(""),[statusFilter,setStatusFilter]=useState<"all"|"active"|"inactive">("all"),[myId,setMyId]=useState<string|null>(null),[editing,setEditing]=useState<any|null>(null),[form,setForm]=useState<any>({}),[canManage,setCanManage]=useState(false),[loading,setLoading]=useState(true),[creating,setCreating]=useState(false),[createForm,setCreateForm]=useState<any>({fullName:"",email:"",jobTitle:"",phone:"",roleId:"",departmentId:""});
  const load=async()=>{try{setLoading(true);const [u,r,d,p]=await Promise.all([listProfiles(),getRoles(),getActiveDepartments(),getMyProfile()]);setUsers(u??[]);setRoles(r??[]);setDepartments(d??[]);const role=p?.roles as any;const key=Array.isArray(role)?role[0]?.key:role?.key;setCanManage(key==="admin");setMyId((p as any)?.id??null);}catch(e:any){toast.error(e?.message??"Não foi possível carregar os usuários.")}finally{setLoading(false)}};useEffect(()=>{void load()},[]);
  const filtered=useMemo(()=>users.filter(u=>statusFilter==="all"||(statusFilter==="active"?u.is_active:!u.is_active)).filter(u=>`${u.full_name} ${u.email??""} ${u.job_title??""} ${u.departments?.name??""}`.toLowerCase().includes(query.toLowerCase())),[users,query,statusFilter]);
