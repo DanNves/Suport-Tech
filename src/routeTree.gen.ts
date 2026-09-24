@@ -99,8 +99,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/alterar-senha': typeof AlterarSenhaRoute
-  '/auth/confirm': typeof AuthConfirmRoute
-  '/alterar-senha': typeof AlterarSenhaRoute
   '/ativos': typeof AtivosRoute
   '/catalogo': typeof CatalogoRoute
   '/chamados': typeof ChamadosRouteWithChildren
@@ -115,6 +113,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth/confirm': typeof AuthConfirmRoute
+  '/alterar-senha': typeof AlterarSenhaRoute
   '/ativos': typeof AtivosRoute
   '/catalogo': typeof CatalogoRoute
   '/chamados': typeof ChamadosRouteWithChildren
@@ -130,6 +130,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth/confirm': typeof AuthConfirmRoute
+  '/alterar-senha': typeof AlterarSenhaRoute
   '/ativos': typeof AtivosRoute
   '/catalogo': typeof CatalogoRoute
   '/chamados': typeof ChamadosRouteWithChildren
@@ -162,7 +164,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/ativos'
+    | '/auth/confirm'
+    | '/alterar-senha'
+    | '/ativos
     | '/catalogo'
     | '/chamados'
     | '/configuracoes'
