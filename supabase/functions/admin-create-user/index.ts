@@ -9,6 +9,13 @@ const json = (body: unknown, status = 200) =>
 
 const SENSITIVE_KEYS = ["password", "senha", "token", "service_role", "apikey", "api_key", "secret"];
 const RESEND_WINDOW_SECONDS = 120;
+function getAppRedirect(req: Request) {
+  const configured = Deno.env.get("SUPPORTTECH_APP_URL")?.trim().replace(/\/$/, "");
+  const origin = req.headers.get("origin")?.trim().replace(/\/$/, "");
+  const base = configured || origin;
+  return base ? `${base}/login` : null;
+}
+
 
 function sanitize(metadata: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -121,12 +128,26 @@ export default {
       const targetEmail = profile?.email ? String(profile.email) : (authUser?.user?.email ?? null);
 
       if (!authUser?.user || !targetEmail) return notEligible;
-      if (authUser.user.email_confirmed_at || authUser.user.last_sign_in_at) return notEligible;
+      if (authUser.user.email_confirmed_at) {
+        return json({
+          error: "Este usuário já confirmou o e-mail. Use “Enviar redefinição de senha”.",
+          code: "INVITE_NOT_ELIGIBLE",
+        }, 409);
+      }
 
-      const { error: resendError } = await ctx.supabaseAdmin.auth.admin.inviteUserByEmail(
-        targetEmail,
-        { data: { full_name: profile?.full_name ?? authUser.user.user_metadata?.full_name ?? null } },
-      );
+      const redirectTo = getAppRedirect(req);
+      if (!redirectTo) {
+        return json({
+          error: "URL do sistema não configurada para o convite.",
+          code: "APP_URL_NOT_CONFIGURED",
+        }, 500);
+      }
+
+      const { error: resendError } = await ctx.supabaseAdmin.auth.resend({
+        type: "signup",
+        email: targetEmail,
+        options: { emailRedirectTo: redirectTo },
+      });
 
       if (resendError) {
         console.error("Invite resend failed:", resendError.message);
@@ -207,9 +228,18 @@ export default {
       }, 409);
     }
 
+    const redirectTo = getAppRedirect(req);
+    if (!redirectTo) {
+      return json({
+        error: "URL do sistema não configurada para o convite.",
+        code: "APP_URL_NOT_CONFIGURED",
+      }, 500);
+    }
+
     const { data: invited, error: inviteError } =
       await ctx.supabaseAdmin.auth.admin.inviteUserByEmail(email, {
         data: { full_name: fullName },
+        redirectTo,
       });
 
     if (inviteError || !invited.user) {
