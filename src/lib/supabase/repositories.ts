@@ -160,8 +160,8 @@ export async function listOperationalReportTickets(startDate?: string, endDate?:
     .select("id,ticket_number,subject,status,priority,created_at,first_response_at,resolved_at,closed_at,response_due_at,resolution_due_at,sla_response_breached,sla_resolution_breached,department_id,departments(name,code)")
     .order("created_at", { ascending: true })
     .limit(5000);
-  if (startDate) query = query.gte("created_at", \`\${startDate}T00:00:00-03:00\`);
-  if (endDate) query = query.lt("created_at", \`\${endDate}T00:00:00-03:00\`);
+  if (startDate) query = query.gte("created_at", `${startDate}T00:00:00-03:00`);
+  if (endDate) query = query.lt("created_at", `${endDate}T00:00:00-03:00`);
   const { data, error } = await query;
   if (error) throwRepositoryError(error, "reports.tickets.list", "Não foi possível carregar os dados dos relatórios.");
   return (data ?? []) as any[];
