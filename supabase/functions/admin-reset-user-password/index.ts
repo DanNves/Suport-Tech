@@ -49,7 +49,7 @@ export default {
     const { error: resetError } = await ctx.supabase.auth.resetPasswordForEmail(target.email, { redirectTo });
 
     if (resetError) {
-      return json({ error: "Não foi possível enviar o link de redefinição.", code: "PASSWORD_RESET_FAILED" }, 400);
+      return json({ error: "Não foi possível enviar o link de redefinição.", code: "PASSWORD_RESET_FAILED" }, 200);
     }
 
     return json({ ok: true, message: "Link de redefinição enviado para o e-mail do usuário." });
