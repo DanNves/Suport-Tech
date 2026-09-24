@@ -118,7 +118,7 @@ export default {
             ? "O limite de envio de e-mails do Supabase foi atingido. Aguarde antes de tentar novamente."
             : "Não foi possível reenviar o acesso por e-mail. Verifique a configuração de e-mail do projeto.",
           code: isRateLimit ? "AUTH_EMAIL_RATE_LIMITED" : "ACCESS_RESEND_FAILED",
-        }, isRateLimit ? 429 : 400);
+        }, 200);
       }
 
       await writeAudit(ctx.supabaseAdmin, {
@@ -179,7 +179,7 @@ export default {
       return json({
         error: isRateLimit ? "O limite de envio de e-mails do Supabase foi atingido. Aguarde o período de limite antes de tentar novamente." : message,
         code: "AUTH_INVITE_FAILED",
-      }, isRateLimit ? 429 : 400);
+      }, 200);
     }
 
     const { data: updatedProfile, error: profileError } = await ctx.supabaseAdmin.from("profiles")
