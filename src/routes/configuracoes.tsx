@@ -550,7 +550,7 @@ function ConfiguracoesPage() {
                 {dirty
                   ? "Há alterações não salvas."
                   : updatedAt
-                    ? \`Última atualização: \${new Date(updatedAt).toLocaleString("pt-BR")}\`
+                    ? `Última atualização: ${new Date(updatedAt).toLocaleString("pt-BR")}`
                     : "Configurações carregadas."}
               </div>
               <div className="flex gap-2">
