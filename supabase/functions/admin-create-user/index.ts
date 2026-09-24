@@ -87,38 +87,46 @@ export default {
         return json({ error: "Usuário não possui uma conta de autenticação válida.", code: "NOT_ELIGIBLE" }, 400);
       }
 
-      if (authUser.user.email_confirmed_at) {
-        return json({ error: "Este usuário já confirmou o e-mail. Use “Enviar redefinição de senha”.", code: "INVITE_NOT_ELIGIBLE" }, 409);
-      }
-
       const redirectTo = getAppRedirect(req);
-      if (!redirectTo) return json({ error: "URL do sistema não configurada para o convite.", code: "APP_URL_NOT_CONFIGURED" }, 500);
+      if (!redirectTo) return json({ error: "URL do sistema não configurada para o acesso.", code: "APP_URL_NOT_CONFIGURED" }, 500);
 
-      // The user already exists in auth.users after the original invitation.
-      // Resend the existing signup confirmation instead of trying to create a second user.
-      const { error: resendError } = await ctx.supabaseAdmin.auth.resend({
-        type: "signup",
-        email: targetEmail,
-        options: { emailRedirectTo: redirectTo },
-      });
-      if (resendError) {
-        const isRateLimit = /rate limit|rate_limit|too many/i.test(resendError.message);
+      const confirmed = Boolean(authUser.user.email_confirmed_at);
+      const method = confirmed ? "password_recovery" : "signup_confirmation";
+
+      // Para cadastro ainda não confirmado, reenviamos a confirmação.
+      // Para cadastro já confirmado, enviamos um novo link para definir/recuperar a senha.
+      const resendResult = confirmed
+        ? await ctx.supabase.auth.resetPasswordForEmail(targetEmail, { redirectTo })
+        : await ctx.supabaseAdmin.auth.resend({
+            type: "signup",
+            email: targetEmail,
+            options: { emailRedirectTo: redirectTo },
+          });
+
+      if (resendResult.error) {
+        const isRateLimit = /rate limit|rate_limit|too many|429/i.test(resendResult.error.message);
         return json({
           error: isRateLimit
             ? "O limite de envio de e-mails do Supabase foi atingido. Aguarde antes de tentar novamente."
             : "Não foi possível reenviar o acesso por e-mail. Verifique a configuração de e-mail do projeto.",
-          code: isRateLimit ? "AUTH_EMAIL_RATE_LIMITED" : "INVITE_RESEND_FAILED",
+          code: isRateLimit ? "AUTH_EMAIL_RATE_LIMITED" : "ACCESS_RESEND_FAILED",
         }, isRateLimit ? 429 : 400);
       }
 
       await writeAudit(ctx.supabaseAdmin, {
         actorId: callerId,
-        action: "user.invite_resent",
+        action: "user.access_resent",
         entityType: "user",
         entityId: userId,
-        metadata: { email: targetEmail, method: "signup_confirmation" },
+        metadata: { email: targetEmail, method },
       });
-      return json({ ok: true, message: "E-mail de acesso reenviado para o usuário." });
+
+      return json({
+        ok: true,
+        message: confirmed
+          ? "Link de acesso/redefinição enviado para o e-mail do usuário."
+          : "E-mail de confirmação de acesso reenviado para o usuário.",
+      });
     }
 
     const fullName = String((body as any).fullName ?? "").trim();
