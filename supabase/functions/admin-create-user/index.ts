@@ -69,7 +69,7 @@ export default {
 
       const since = new Date(Date.now() - RESEND_WINDOW_SECONDS * 1000).toISOString();
       const { data: recent } = await ctx.supabaseAdmin.from("audit_log").select("id")
-        .eq("action", "user.invite_resent").eq("entity_id", userId).gte("created_at", since).limit(1);
+        .eq("action", "user.access_resent").eq("entity_id", userId).gte("created_at", since).limit(1);
       if (Array.isArray(recent) && recent.length > 0) {
         return json({ error: "Um convite já foi reenviado há poucos instantes. Aguarde para tentar novamente.", code: "RATE_LIMITED" }, 429);
       }
