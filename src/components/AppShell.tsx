@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Activity, Bell, BookOpen, Boxes, ChevronDown, CircleHelp, ClipboardList, Command, Gauge, LayoutDashboard, LifeBuoy, LogOut, Menu, Monitor, MoreHorizontal, Search, Settings, ShieldCheck, UserRound, Users, X } from "lucide-react";
+import { Activity, Bell, BookOpen, ChevronDown, CircleHelp, ClipboardList, Command, Gauge, LayoutDashboard, LifeBuoy, LogOut, Menu, Monitor, MoreHorizontal, Search, Settings, ShieldCheck, UserRound, Users, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +19,7 @@ const primaryNav: NavItem[] = [
 ];
 const managementNav: NavItem[] = [
   { label: "Relatórios", icon: Gauge, href: "/relatorios" },
-  { label: "Catálogo de serviços", icon: Boxes, href: "/catalogo" },
-  { label: "Gestão", icon: ShieldCheck, href: "/gestao" },
+    { label: "Gestão", icon: ShieldCheck, href: "/gestao" },
   { label: "Configurações", icon: Settings, href: "/configuracoes" },
 ];
 
