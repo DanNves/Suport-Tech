@@ -205,6 +205,18 @@ export async function testTicketEmailAdmin() {
   return data;
 }
 
+export async function requestPasswordRecovery(email: string) {
+  const { data, error } = await supabase.functions.invoke("send-password-recovery", {
+    body: { email: email.trim().toLowerCase() },
+  });
+  if (error) throwRepositoryError(error, "auth.password.recovery", "Não foi possível iniciar a recuperação da senha.");
+  if ((data as any)?.error) {
+    const e = Object.assign(new Error((data as any).error), { code: (data as any).code ?? "PASSWORD_RECOVERY_FAILED" });
+    throwRepositoryError(e, "auth.password.recovery", "Não foi possível iniciar a recuperação da senha.");
+  }
+  return data;
+}
+
 export async function testAuthEmailAdmin() {
   await assertAuthenticated("settings.email_test");
   const { data, error } = await supabase.functions.invoke("admin-test-auth-email", { body: {} });
