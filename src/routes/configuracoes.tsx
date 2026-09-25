@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { getAccessMatrix, getAppSettings, getMyProfile, getPermissions, testAuthEmailAdmin, updateAppSetting, updateRolePermissionsAdmin } from "@/lib/supabase/repositories";
+import { getAccessMatrix, getAppSettings, getMyProfile, getPermissions, testAuthEmailAdmin, testTicketEmailAdmin, updateAppSetting, updateRolePermissionsAdmin } from "@/lib/supabase/repositories";
 import { toast } from "sonner";
 
 type TabKey = "geral" | "email" | "notificacoes" | "chamados" | "acessos" | "seguranca";
@@ -44,6 +44,18 @@ const defaults: SettingsMap = {
     emailAssignment: true,
     emailResolution: true,
     emailAccess: true,
+  },
+  email: {
+    enabled: true,
+    provider: "resend",
+    fromName: "SuportTech",
+    fromEmail: "",
+    replyTo: "",
+    ticketNew: true,
+    ticketAssignment: true,
+    ticketResolution: true,
+    ticketComment: true,
+    ticketStatusChange: true,
   },
   tickets: {
     defaultPriority: "media",
@@ -105,6 +117,7 @@ function ConfiguracoesPage() {
   const [accessDirty, setAccessDirty] = useState(false);
   const [accessSaving, setAccessSaving] = useState(false);
   const [emailTesting, setEmailTesting] = useState(false);
+  const [ticketEmailTesting, setTicketEmailTesting] = useState(false);
 
   const load = async () => {
     try {
@@ -148,7 +161,7 @@ function ConfiguracoesPage() {
     if (!canManage || saving) return;
     setSaving(true);
     try {
-      for (const key of ["system", "preferences", "notifications", "tickets"]) {
+      for (const key of ["system", "preferences", "notifications", "tickets", "email"]) {
         await updateAppSetting(key, settings[key] ?? {});
       }
       toast.success("Configurações salvas com sucesso.");
@@ -457,6 +470,80 @@ function ConfiguracoesPage() {
                     </p>
                   </Card>
                 </div>
+                <Card className="border-primary/15 bg-primary/5 p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-sm font-semibold">E-mail de chamados</div>
+                      <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+                        Configure o remetente e quais eventos do atendimento devem gerar e-mails. A chave do Resend fica somente nos secrets da Edge Function do Supabase.
+                      </p>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${settings.email?.fromEmail ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                      {settings.email?.fromEmail ? "Remetente configurado" : "Aguardando remetente"}
+                    </span>
+                  </div>
+                  <div className="mt-5 grid gap-4 md:grid-cols-3">
+                    <div>
+                      <Label>Nome do remetente</Label>
+                      <Input className="mt-1.5" value={settings.email?.fromName ?? ""} onChange={(e) => update("email", "fromName", e.target.value)} disabled={!canManage} placeholder="SuportTech" />
+                    </div>
+                    <div>
+                      <Label>E-mail do remetente</Label>
+                      <Input className="mt-1.5" type="email" value={settings.email?.fromEmail ?? ""} onChange={(e) => update("email", "fromEmail", e.target.value)} disabled={!canManage} placeholder="suporte@empresa.com" />
+                    </div>
+                    <div>
+                      <Label>Responder para (opcional)</Label>
+                      <Input className="mt-1.5" type="email" value={settings.email?.replyTo ?? ""} onChange={(e) => update("email", "replyTo", e.target.value)} disabled={!canManage} placeholder="suporte@empresa.com" />
+                    </div>
+                  </div>
+                  <div className="mt-5 rounded-xl border bg-background p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <div className="text-sm font-medium">Ativar e-mail de chamados</div>
+                        <div className="mt-1 text-xs text-muted-foreground">O envio depende da configuração do provedor Resend no ambiente do Supabase.</div>
+                      </div>
+                      <Switch checked={Boolean(settings.email?.enabled)} onCheckedChange={(value) => update("email", "enabled", value)} disabled={!canManage} />
+                    </div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      {[
+                        ["ticketNew", "Novo chamado", "Avisar a equipe de suporte quando um novo chamado for aberto."],
+                        ["ticketAssignment", "Atribuição", "Avisar o responsável quando o chamado for atribuído."],
+                        ["ticketResolution", "Resolução", "Avisar o solicitante quando o chamado for resolvido."],
+                        ["ticketStatusChange", "Mudança de status", "Avisar o solicitante nas demais mudanças de status."],
+                        ["ticketComment", "Nova comunicação", "Avisar a outra parte quando houver mensagem pública no chamado."],
+                      ].map(([key, title, description]) => (
+                        <div key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                          <div>
+                            <div className="text-sm font-medium">{title}</div>
+                            <div className="mt-0.5 text-[11px] text-muted-foreground">{description}</div>
+                          </div>
+                          <Switch checked={Boolean(settings.email?.[key])} onCheckedChange={(value) => update("email", key, value)} disabled={!canManage || !settings.email?.enabled} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="text-sm font-medium">Teste do canal de chamados</div>
+                      <div className="mt-1 text-xs text-muted-foreground">Envia uma mensagem de teste somente para o e-mail do administrador conectado.</div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      disabled={!canManage || ticketEmailTesting}
+                      onClick={() => {
+                        setTicketEmailTesting(true);
+                        void testTicketEmailAdmin()
+                          .then((result: any) => toast.success(result?.message ?? "E-mail de teste enviado."))
+                          .catch((error: any) => toast.error(error?.message ?? "Não foi possível testar o e-mail de chamados."))
+                          .finally(() => setTicketEmailTesting(false));
+                      }}
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      {ticketEmailTesting ? "Enviando..." : "Testar e-mail de chamados"}
+                    </Button>
+                  </div>
+                </Card>
+
                 {!canManage && (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                     Apenas administradores ativos podem executar o teste de envio.
