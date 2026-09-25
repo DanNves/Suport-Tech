@@ -85,6 +85,16 @@ export async function getMyPermissions() {
   return ((data ?? []) as any[]).map((row) => row?.permissions?.key).filter(Boolean) as string[];
 }
 
+export async function testAuthEmailAdmin() {
+  await assertAuthenticated("settings.email_test");
+  const { data, error } = await supabase.functions.invoke("admin-test-auth-email", { body: {} });
+  if (error) throwRepositoryError(error, "settings.email_test", "Não foi possível testar o envio de e-mail.");
+  if ((data as any)?.error) {
+    const e = Object.assign(new Error((data as any).error), { code: (data as any).code ?? "AUTH_EMAIL_TEST_FAILED" });
+    throwRepositoryError(e, "settings.email_test", "Não foi possível testar o envio de e-mail.");
+  }
+  return data;
+}
 export async function getPermissions() {
   await assertAuthenticated("permissions.list");
   const { data, error } = await (supabase.from("permissions") as any)
