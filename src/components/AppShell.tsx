@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase, supabaseConfigured } from "@/lib/supabase/client";
-import { getMyPermissions } from "@/lib/supabase/repositories";
+import { getMyNotifications, getMyPermissions, markAllNotificationsRead, markNotificationRead } from "@/lib/supabase/repositories";
 import { hasPermission, permissionForRoute } from "@/lib/access-control";
 
 type RoutePath = "/" | "/chamados" | "/ativos" | "/usuarios" | "/conhecimento" | "/relatorios" | "/catalogo" | "/gestao" | "/configuracoes" | "/perfil";
@@ -32,6 +32,8 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [permissions, setPermissions] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const closeMobile = () => setSidebarOpen(false);
@@ -44,7 +46,14 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
       if (!active) return;
       if (!data.session) { await navigate({ to: "/login", replace: true }); return; }
       setUserEmail(data.session.user.email ?? null);
-      try { setPermissions(await getMyPermissions()); } catch { setPermissions([]); }
+      try {
+        const [nextPermissions, nextNotifications] = await Promise.all([getMyPermissions(), getMyNotifications()]);
+        setPermissions(nextPermissions);
+        setNotifications(nextNotifications);
+      } catch {
+        setPermissions([]);
+        setNotifications([]);
+      }
       setAuthChecking(false);
     };
     void check();
@@ -52,7 +61,13 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
       if (!active) return;
       if (!session) { void navigate({ to: "/login", replace: true }); return; }
       setUserEmail(session.user.email ?? null);
-      void getMyPermissions().then(setPermissions).catch(() => setPermissions([]));
+      void Promise.all([getMyPermissions(), getMyNotifications()]).then(([nextPermissions, nextNotifications]) => {
+        setPermissions(nextPermissions);
+        setNotifications(nextNotifications);
+      }).catch(() => {
+        setPermissions([]);
+        setNotifications([]);
+      });
       setAuthChecking(false);
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
@@ -82,7 +97,31 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
       <div className="shrink-0 border-t border-sidebar-border p-3"><div className="rounded-xl bg-sidebar-accent/70 p-3"><div className="mb-2 flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-background text-primary shadow-sm"><ShieldCheck className="h-4 w-4" /></span><div className="text-xs font-semibold">Ambiente protegido</div></div><div className="flex items-center gap-2 text-[11px] text-muted-foreground"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Serviços operacionais</div></div></div>
     </aside>
     {sidebarOpen && <button className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px] lg:hidden" onClick={closeMobile} aria-label="Fechar menu" />}
-    <div className="min-h-screen lg:pl-[264px]"><header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-border/80 bg-background/90 px-4 backdrop-blur-xl sm:px-6 lg:px-8"><div className="flex min-w-0 items-center gap-3"><button className="rounded-lg border border-border p-2 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Abrir menu"><Menu className="h-5 w-5" /></button><div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex"><span>SuportTech</span><span>/</span><span className="text-foreground">{title ?? "Visão geral"}</span></div></div><div className="flex items-center gap-2 sm:gap-3"><div className="relative hidden w-64 md:block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Buscar" placeholder="Buscar no sistema..." className="h-10 rounded-xl border-border/80 bg-muted/40 pl-9 pr-12" /><kbd className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-md border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground lg:block">⌘ K</kbd></div><Button variant="ghost" size="icon" className="relative rounded-xl" aria-label="Notificações"><Bell className="h-[18px] w-[18px]" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary ring-2 ring-background" /></Button><div className="hidden h-7 w-px bg-border sm:block" /><div className="relative"><button className="group flex items-center gap-2 rounded-xl px-1.5 py-1 hover:bg-muted/70" onClick={() => setUserMenuOpen(v => !v)} aria-expanded={userMenuOpen} aria-haspopup="menu" aria-label="Abrir menu do usuário"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{userEmail?.slice(0, 2).toUpperCase() ?? "ST"}</div><div className="hidden text-left sm:block"><div className="max-w-40 truncate text-xs font-semibold">{userEmail ?? "Usuário"}</div><div className="text-[10px] text-muted-foreground">Minha conta</div></div><ChevronDown className={cn("hidden h-4 w-4 text-muted-foreground transition-transform sm:block", userMenuOpen && "rotate-180")} /></button>{userMenuOpen && <><button className="fixed inset-0 z-40 cursor-default" onClick={() => setUserMenuOpen(false)} aria-label="Fechar menu do usuário" /><div role="menu" className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-xl border border-border bg-background p-1.5 shadow-lg"><button role="menuitem" className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-muted" onClick={() => { setUserMenuOpen(false); void navigate({ to: "/perfil" }); }}><UserRound className="h-4 w-4 text-muted-foreground" /><span>Perfil</span></button><button role="menuitem" className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-600 hover:bg-red-50" onClick={() => void signOut()} disabled={signingOut}><LogOut className="h-4 w-4" /><span>{signingOut ? "Saindo..." : "Sair"}</span></button></div></>}</div></div></header><main className="mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">{title && <div className="mb-6"><h1 className="text-2xl font-bold tracking-tight sm:text-[28px]">{title}</h1>{subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}</div>}{children}</main></div>
+    <div className="min-h-screen lg:pl-[264px]"><header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-border/80 bg-background/90 px-4 backdrop-blur-xl sm:px-6 lg:px-8"><div className="flex min-w-0 items-center gap-3"><button className="rounded-lg border border-border p-2 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Abrir menu"><Menu className="h-5 w-5" /></button><div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex"><span>SuportTech</span><span>/</span><span className="text-foreground">{title ?? "Visão geral"}</span></div></div><div className="flex items-center gap-2 sm:gap-3"><div className="relative hidden w-64 md:block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Buscar" placeholder="Buscar no sistema..." className="h-10 rounded-xl border-border/80 bg-muted/40 pl-9 pr-12" /><kbd className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-md border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground lg:block">⌘ K</kbd></div><div className="relative">
+  <Button variant="ghost" size="icon" className="relative rounded-xl" aria-label="Notificações" onClick={() => { setNotificationsOpen(v => !v); setUserMenuOpen(false); }}>
+    <Bell className="h-[18px] w-[18px]" />
+    {notifications.some((n) => !n.is_read) && <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary ring-2 ring-background" />}
+  </Button>
+  {notificationsOpen && <div className="absolute right-0 top-full z-50 mt-2 w-[min(380px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-border bg-background shadow-xl">
+    <div className="flex items-center justify-between border-b p-3">
+      <div><div className="text-sm font-semibold">Notificações</div><div className="text-[11px] text-muted-foreground">{notifications.filter(n => !n.is_read).length} não lida(s)</div></div>
+      <Button variant="ghost" size="sm" onClick={() => { void markAllNotificationsRead().then(() => setNotifications(current => current.map(n => ({ ...n, is_read: true, read_at: new Date().toISOString() }))).catch(() => undefined)); }}>Marcar todas</Button>
+    </div>
+    <div className="max-h-[420px] overflow-y-auto">
+      {notifications.length === 0 ? <div className="p-6 text-center text-sm text-muted-foreground">Nenhuma notificação.</div> :
+        notifications.slice(0, 20).map((n) => <button key={n.id} type="button" className={cn("w-full border-b px-4 py-3 text-left hover:bg-muted/40", !n.is_read && "bg-primary/5")} onClick={() => {
+          if (!n.is_read) void markNotificationRead(n.id).then(() => setNotifications(current => current.map(item => item.id === n.id ? { ...item, is_read: true, read_at: new Date().toISOString() } : item))).catch(() => undefined);
+          setNotificationsOpen(false);
+          if (n.ticket_id) void navigate({ to: "/chamados" });
+        }}>
+          <div className="text-sm font-medium">{n.title}</div>
+          {n.message && <div className="mt-1 text-xs leading-5 text-muted-foreground">{n.message}</div>}
+          <div className="mt-1 text-[10px] text-muted-foreground">{new Date(n.created_at).toLocaleString("pt-BR")}</div>
+        </button>)
+      }
+    </div>
+  </div>}
+</div><div className="hidden h-7 w-px bg-border sm:block" /><div className="relative"><button className="group flex items-center gap-2 rounded-xl px-1.5 py-1 hover:bg-muted/70" onClick={() => setUserMenuOpen(v => !v)} aria-expanded={userMenuOpen} aria-haspopup="menu" aria-label="Abrir menu do usuário"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{userEmail?.slice(0, 2).toUpperCase() ?? "ST"}</div><div className="hidden text-left sm:block"><div className="max-w-40 truncate text-xs font-semibold">{userEmail ?? "Usuário"}</div><div className="text-[10px] text-muted-foreground">Minha conta</div></div><ChevronDown className={cn("hidden h-4 w-4 text-muted-foreground transition-transform sm:block", userMenuOpen && "rotate-180")} /></button>{userMenuOpen && <><button className="fixed inset-0 z-40 cursor-default" onClick={() => setUserMenuOpen(false)} aria-label="Fechar menu do usuário" /><div role="menu" className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-xl border border-border bg-background p-1.5 shadow-lg"><button role="menuitem" className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-muted" onClick={() => { setUserMenuOpen(false); void navigate({ to: "/perfil" }); }}><UserRound className="h-4 w-4 text-muted-foreground" /><span>Perfil</span></button><button role="menuitem" className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-600 hover:bg-red-50" onClick={() => void signOut()} disabled={signingOut}><LogOut className="h-4 w-4" /><span>{signingOut ? "Saindo..." : "Sair"}</span></button></div></>}</div></div></header><main className="mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">{title && <div className="mb-6"><h1 className="text-2xl font-bold tracking-tight sm:text-[28px]">{title}</h1>{subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}</div>}{children}</main></div>
   </div>;
 }
 export function SectionHeader({ eyebrow, title, action }: { eyebrow?: string; title: string; action?: ReactNode }) { return <div className="mb-4 flex items-end justify-between gap-4"><div>{eyebrow && <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{eyebrow}</div>}<h2 className="text-base font-semibold tracking-tight">{title}</h2></div>{action}</div>; }
