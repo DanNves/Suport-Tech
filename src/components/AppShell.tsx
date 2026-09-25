@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase, supabaseConfigured } from "@/lib/supabase/client";
-import { getMyNotifications, getMyPermissions, markAllNotificationsRead, markNotificationRead } from "@/lib/supabase/repositories";
+import { getMyNotifications, getMyPermissions, globalSearch, markAllNotificationsRead, markNotificationRead } from "@/lib/supabase/repositories";
 import { hasPermission, permissionForRoute } from "@/lib/access-control";
 
 type RoutePath = "/" | "/chamados" | "/ativos" | "/usuarios" | "/conhecimento" | "/relatorios" | "/catalogo" | "/gestao" | "/configuracoes" | "/perfil";
@@ -34,9 +34,29 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<any>({ tickets: [], assets: [], knowledge: [] });
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const closeMobile = () => setSidebarOpen(false);
+  useEffect(() => {
+    if (searchTerm.trim().length < 2) { setSearchResults({ tickets: [], assets: [], knowledge: [] }); setSearching(false); return; }
+    let active = true;
+    setSearching(true);
+    const timer = window.setTimeout(() => {
+      void globalSearch(searchTerm).then((results) => {
+        if (active) setSearchResults(results);
+      }).catch(() => {
+        if (active) setSearchResults({ tickets: [], assets: [], knowledge: [] });
+      }).finally(() => {
+        if (active) setSearching(false);
+      });
+    }, 250);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [searchTerm]);
+
 
   useEffect(() => {
     if (!supabaseConfigured) { setAuthChecking(false); return; }
@@ -97,7 +117,20 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
       <div className="shrink-0 border-t border-sidebar-border p-3"><div className="rounded-xl bg-sidebar-accent/70 p-3"><div className="mb-2 flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-background text-primary shadow-sm"><ShieldCheck className="h-4 w-4" /></span><div className="text-xs font-semibold">Ambiente protegido</div></div><div className="flex items-center gap-2 text-[11px] text-muted-foreground"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Serviços operacionais</div></div></div>
     </aside>
     {sidebarOpen && <button className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px] lg:hidden" onClick={closeMobile} aria-label="Fechar menu" />}
-    <div className="min-h-screen lg:pl-[264px]"><header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-border/80 bg-background/90 px-4 backdrop-blur-xl sm:px-6 lg:px-8"><div className="flex min-w-0 items-center gap-3"><button className="rounded-lg border border-border p-2 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Abrir menu"><Menu className="h-5 w-5" /></button><div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex"><span>SuportTech</span><span>/</span><span className="text-foreground">{title ?? "Visão geral"}</span></div></div><div className="flex items-center gap-2 sm:gap-3"><div className="relative hidden w-64 md:block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Buscar" placeholder="Buscar no sistema..." className="h-10 rounded-xl border-border/80 bg-muted/40 pl-9 pr-12" /><kbd className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-md border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground lg:block">⌘ K</kbd></div><div className="relative">
+    <div className="min-h-screen lg:pl-[264px]"><header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-border/80 bg-background/90 px-4 backdrop-blur-xl sm:px-6 lg:px-8"><div className="flex min-w-0 items-center gap-3"><button className="rounded-lg border border-border p-2 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Abrir menu"><Menu className="h-5 w-5" /></button><div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex"><span>SuportTech</span><span>/</span><span className="text-foreground">{title ?? "Visão geral"}</span></div></div><div className="flex items-center gap-2 sm:gap-3"><div className="relative hidden w-72 md:block">
+  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+  <Input aria-label="Buscar" value={searchTerm} onFocus={() => setSearchOpen(true)} onChange={(e) => { setSearchTerm(e.target.value); setSearchOpen(true); }} placeholder="Buscar chamados, ativos..." className="h-10 rounded-xl border-border/80 bg-muted/40 pl-9 pr-12" />
+  <kbd className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-md border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground lg:block">⌘ K</kbd>
+  {searchOpen && searchTerm.trim().length >= 2 && <div className="absolute right-0 top-full z-50 mt-2 w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-background shadow-xl">
+    {searching ? <div className="p-5 text-center text-sm text-muted-foreground">Buscando...</div> :
+    (searchResults.tickets.length + searchResults.assets.length + searchResults.knowledge.length) === 0 ? <div className="p-5 text-center text-sm text-muted-foreground">Nenhum resultado encontrado.</div> :
+    <div className="max-h-[420px] overflow-y-auto">
+      {searchResults.tickets.length > 0 && <div className="p-2"><div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Chamados</div>{searchResults.tickets.map((item:any)=><button key={item.id} type="button" className="w-full rounded-lg px-3 py-2 text-left hover:bg-muted" onClick={() => { setSearchOpen(false); setSearchTerm(""); void navigate({ to: "/chamados" }); }}><div className="text-sm font-medium">#{item.ticket_number} — {item.subject}</div><div className="text-[11px] text-muted-foreground">{item.status} · {item.priority}</div></button>)}</div>}
+      {searchResults.assets.length > 0 && <div className="border-t p-2"><div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Ativos</div>{searchResults.assets.map((item:any)=><button key={item.id} type="button" className="w-full rounded-lg px-3 py-2 text-left hover:bg-muted" onClick={() => { setSearchOpen(false); setSearchTerm(""); void navigate({ to: "/ativos" }); }}><div className="text-sm font-medium">{item.asset_tag} — {item.name}</div><div className="text-[11px] text-muted-foreground">{item.asset_type} · {item.status}</div></button>)}</div>}
+      {searchResults.knowledge.length > 0 && <div className="border-t p-2"><div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Conhecimento</div>{searchResults.knowledge.map((item:any)=><button key={item.id} type="button" className="w-full rounded-lg px-3 py-2 text-left hover:bg-muted" onClick={() => { setSearchOpen(false); setSearchTerm(""); void navigate({ to: "/conhecimento" }); }}><div className="text-sm font-medium">{item.title}</div><div className="text-[11px] text-muted-foreground">{item.category ?? "Artigo"}</div></button>)}</div>}
+    </div>}
+  </div>}
+</div><div className="relative">
   <Button variant="ghost" size="icon" className="relative rounded-xl" aria-label="Notificações" onClick={() => { setNotificationsOpen(v => !v); setUserMenuOpen(false); }}>
     <Bell className="h-[18px] w-[18px]" />
     {notifications.some((n) => !n.is_read) && <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary ring-2 ring-background" />}
