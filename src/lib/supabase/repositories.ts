@@ -85,6 +85,71 @@ export async function getMyPermissions() {
   return ((data ?? []) as any[]).map((row) => row?.permissions?.key).filter(Boolean) as string[];
 }
 
+export async function listKnowledgeArticles() {
+  await assertAuthenticated("knowledge.list");
+  const { data, error } = await (supabase.from("knowledge_articles") as any)
+    .select("id,title,slug,category,summary,content,tags,is_published,views,created_by,updated_by,created_at,updated_at")
+    .order("updated_at", { ascending: false });
+  if (error) throwRepositoryError(error, "knowledge.list", "Não foi possível carregar a base de conhecimento.");
+  return (data ?? []) as any[];
+}
+
+export async function createKnowledgeArticle(input: { title: string; category?: string; summary?: string; content: string; tags?: string[]; isPublished?: boolean }) {
+  await assertAuthenticated("knowledge.create");
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throwRepositoryError(new Error("Sessão inválida."), "knowledge.create", "Sua sessão não está ativa.");
+  const slug = input.title.trim().toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 100);
+  const { data, error } = await (supabase.from("knowledge_articles") as any)
+    .insert({ title: input.title.trim(), slug: slug || crypto.randomUUID(), category: input.category?.trim() || null, summary: input.summary?.trim() || null, content: input.content.trim(), tags: input.tags ?? [], is_published: input.isPublished ?? true, created_by: user.id, updated_by: user.id })
+    .select().single();
+  if (error) throwRepositoryError(error, "knowledge.create", "Não foi possível criar o artigo.");
+  return data;
+}
+
+export async function updateKnowledgeArticle(input: { id: string; title: string; category?: string; summary?: string; content: string; tags?: string[]; isPublished?: boolean }) {
+  await assertAuthenticated("knowledge.update");
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throwRepositoryError(new Error("Sessão inválida."), "knowledge.update", "Sua sessão não está ativa.");
+  const slug = input.title.trim().toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 100);
+  const { data, error } = await (supabase.from("knowledge_articles") as any)
+    .update({ title: input.title.trim(), slug: slug || crypto.randomUUID(), category: input.category?.trim() || null, summary: input.summary?.trim() || null, content: input.content.trim(), tags: input.tags ?? [], is_published: input.isPublished ?? true, updated_by: user.id, updated_at: new Date().toISOString() })
+    .eq("id", input.id).select().single();
+  if (error) throwRepositoryError(error, "knowledge.update", "Não foi possível atualizar o artigo.");
+  return data;
+}
+
+export async function deleteKnowledgeArticle(id: string) {
+  await assertAuthenticated("knowledge.delete");
+  const { error } = await (supabase.from("knowledge_articles") as any).delete().eq("id", id);
+  if (error) throwRepositoryError(error, "knowledge.delete", "Não foi possível excluir o artigo.");
+}
+
+export async function listMyNotifications() {
+  await assertAuthenticated("notifications.list");
+  const { data, error } = await (supabase.from("notifications") as any)
+    .select("id,type,title,message,ticket_id,metadata,is_read,created_at,read_at")
+    .order("created_at", { ascending: false }).limit(50);
+  if (error) throwRepositoryError(error, "notifications.list", "Não foi possível carregar as notificações.");
+  return (data ?? []) as any[];
+}
+
+export async function markNotificationRead(id: string) {
+  await assertAuthenticated("notifications.read");
+  const { error } = await (supabase.from("notifications") as any)
+    .update({ is_read: true, read_at: new Date().toISOString() }).eq("id", id);
+  if (error) throwRepositoryError(error, "notifications.read", "Não foi possível atualizar a notificação.");
+}
+
+export async function markAllNotificationsRead() {
+  await assertAuthenticated("notifications.read_all");
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const { error } = await (supabase.from("notifications") as any)
+    .update({ is_read: true, read_at: new Date().toISOString() }).eq("user_id", user.id).eq("is_read", false);
+  if (error) throwRepositoryError(error, "notifications.read_all", "Não foi possível marcar as notificações como lidas.");
+}
+
+
 export async function testAuthEmailAdmin() {
   await assertAuthenticated("settings.email_test");
   const { data, error } = await supabase.functions.invoke("admin-test-auth-email", { body: {} });
