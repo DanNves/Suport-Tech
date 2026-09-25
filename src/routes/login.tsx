@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { supabase, supabaseConfigured } from "@/lib/supabase/client";
 import { normalizeSupportError, type SupportError } from "@/lib/error-handling";
+import { requestPasswordRecovery } from "@/lib/supabase/repositories";
 
 export const Route = createFileRoute("/login")({ component: LoginPage });
 
@@ -118,9 +119,7 @@ function LoginPage() {
     if (!email.trim() || recovering || loading) return;
     setRecovering(true); setError(null); setNotice(null);
     try {
-      const redirectTo = "https://suporttech.lovable.app/auth/confirm";
-      const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
-      if (authError) throw authError;
+      await requestPasswordRecovery(email);
       setNotice("Se existir uma conta para este e-mail, enviaremos as instruções para redefinir a senha.");
     } catch (err) {
       setError(normalizeSupportError(err, "auth.password.reset", "Não foi possível iniciar a recuperação da senha."));
