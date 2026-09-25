@@ -124,6 +124,35 @@ export async function deleteKnowledgeArticle(id: string) {
   if (error) throwRepositoryError(error, "knowledge.delete", "Não foi possível excluir o artigo.");
 }
 
+export async function globalSearch(term: string) {
+  await assertAuthenticated("search.global");
+  const q = term.trim();
+  if (q.length < 2) return { tickets: [], assets: [], knowledge: [] };
+  const permissions = await getMyPermissions();
+  const result: { tickets: any[]; assets: any[]; knowledge: any[] } = { tickets: [], assets: [], knowledge: [] };
+  const ticketQuery = (supabase.from("tickets") as any)
+    .select("id,ticket_number,subject,status,priority,created_at")
+    .or(`subject.ilike.%${q}%,description.ilike.%${q}%`)
+    .order("created_at", { ascending: false }).limit(8);
+  const { data: tickets, error: ticketError } = await ticketQuery;
+  if (!ticketError) result.tickets = tickets ?? [];
+  if (permissions.includes("assets.view")) {
+    const { data: assets } = await (supabase.from("assets") as any)
+      .select("id,asset_tag,name,asset_type,status")
+      .or(`asset_tag.ilike.%${q}%,name.ilike.%${q}%,serial_number.ilike.%${q}%`)
+      .order("created_at", { ascending: false }).limit(8);
+    result.assets = assets ?? [];
+  }
+  if (permissions.includes("knowledge.view")) {
+    const { data: knowledge } = await (supabase.from("knowledge_articles") as any)
+      .select("id,title,summary,category,updated_at")
+      .or(`title.ilike.%${q}%,summary.ilike.%${q}%,content.ilike.%${q}%`)
+      .order("updated_at", { ascending: false }).limit(8);
+    result.knowledge = knowledge ?? [];
+  }
+  return result;
+}
+
 export async function listMyNotifications() {
   await assertAuthenticated("notifications.list");
   const { data, error } = await (supabase.from("notifications") as any)
