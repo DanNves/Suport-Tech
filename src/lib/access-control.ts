@@ -7,7 +7,7 @@ export const routePermission: Record<string, string> = {
   "/usuarios": "users.view",
   "/conhecimento": "knowledge.view",
   "/relatorios": "reports.view",
-  "/gestao": "users.view",
+  "/gestao": "users.manage",
   "/configuracoes": "settings.manage",
   "/catalogo": "settings.manage",
   "/perfil": "dashboard.view",
