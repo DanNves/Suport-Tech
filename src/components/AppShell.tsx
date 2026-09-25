@@ -52,7 +52,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
       if (!active) return;
       if (!session) { void navigate({ to: "/login", replace: true }); return; }
       setUserEmail(session.user.email ?? null);
-      try { setPermissions(await getMyPermissions()); } catch { setPermissions([]); }
+      void getMyPermissions().then(setPermissions).catch(() => setPermissions([]));
       setAuthChecking(false);
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
