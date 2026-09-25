@@ -179,6 +179,32 @@ export async function markAllNotificationsRead() {
 }
 
 
+export type TicketEmailEvent = "created" | "assigned" | "resolved" | "status_changed" | "comment";
+
+export async function sendTicketEmailEvent(input: { ticketId: string; event: TicketEmailEvent; commentId?: string }) {
+  await assertAuthenticated("tickets.email.send");
+  const { data, error } = await supabase.functions.invoke("send-ticket-email", {
+    body: { mode: "ticket", ticketId: input.ticketId, event: input.event, commentId: input.commentId },
+  });
+  if (error) throwRepositoryError(error, "tickets.email.send", "Não foi possível processar o e-mail do chamado.");
+  if ((data as any)?.error) {
+    const e = Object.assign(new Error((data as any).error), { code: (data as any).code ?? "TICKET_EMAIL_FAILED" });
+    throwRepositoryError(e, "tickets.email.send", "Não foi possível processar o e-mail do chamado.");
+  }
+  return data;
+}
+
+export async function testTicketEmailAdmin() {
+  await assertAuthenticated("settings.ticket_email_test");
+  const { data, error } = await supabase.functions.invoke("send-ticket-email", { body: { mode: "test" } });
+  if (error) throwRepositoryError(error, "settings.ticket_email_test", "Não foi possível testar o e-mail de chamados.");
+  if ((data as any)?.error) {
+    const e = Object.assign(new Error((data as any).error), { code: (data as any).code ?? "TICKET_EMAIL_TEST_FAILED" });
+    throwRepositoryError(e, "settings.ticket_email_test", "Não foi possível testar o e-mail de chamados.");
+  }
+  return data;
+}
+
 export async function testAuthEmailAdmin() {
   await assertAuthenticated("settings.email_test");
   const { data, error } = await supabase.functions.invoke("admin-test-auth-email", { body: {} });
