@@ -126,7 +126,7 @@ export async function deleteKnowledgeArticle(id: string) {
 
 export async function globalSearch(term: string) {
   await assertAuthenticated("search.global");
-  const q = term.trim();
+  const q = term.trim().replace(/[,%()]/g, " ").replace(/\s+/g, " ");
   if (q.length < 2) return { tickets: [], assets: [], knowledge: [] };
   const permissions = await getMyPermissions();
   const result: { tickets: any[]; assets: any[]; knowledge: any[] } = { tickets: [], assets: [], knowledge: [] };
