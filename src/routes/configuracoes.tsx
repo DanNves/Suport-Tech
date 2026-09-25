@@ -4,6 +4,7 @@ import {
   Bell,
   Database,
   Globe2,
+  Mail,
   RefreshCw,
   Save,
   Server,
@@ -18,10 +19,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { getAccessMatrix, getAppSettings, getMyProfile, getPermissions, updateAppSetting, updateRolePermissionsAdmin } from "@/lib/supabase/repositories";
+import { getAccessMatrix, getAppSettings, getMyProfile, getPermissions, testAuthEmailAdmin, updateAppSetting, updateRolePermissionsAdmin } from "@/lib/supabase/repositories";
 import { toast } from "sonner";
 
-type TabKey = "geral" | "notificacoes" | "chamados" | "acessos" | "seguranca";
+type TabKey = "geral" | "email" | "notificacoes" | "chamados" | "acessos" | "seguranca";
 type SettingsMap = Record<string, Record<string, any>>;
 
 const defaults: SettingsMap = {
@@ -53,6 +54,7 @@ const defaults: SettingsMap = {
 
 const tabs: { key: TabKey; label: string; icon: typeof Globe2 }[] = [
   { key: "geral", label: "Geral", icon: Globe2 },
+  { key: "email", label: "E-mail", icon: Mail },
   { key: "notificacoes", label: "Notificações", icon: Bell },
   { key: "chamados", label: "Chamados", icon: Ticket },
   { key: "acessos", label: "Acessos", icon: Users },
@@ -102,6 +104,7 @@ function ConfiguracoesPage() {
   const [accessDraft, setAccessDraft] = useState<Record<string, string[]>>({});
   const [accessDirty, setAccessDirty] = useState(false);
   const [accessSaving, setAccessSaving] = useState(false);
+  const [emailTesting, setEmailTesting] = useState(false);
 
   const load = async () => {
     try {
@@ -401,6 +404,64 @@ function ConfiguracoesPage() {
                     disabled={!canManage}
                   />
                 </div>
+              </section>
+            )}
+
+            {tab === "email" && (
+              <section className="space-y-6">
+                <div>
+                  <h2 className="text-base font-semibold">E-mail do sistema</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Teste o mesmo fluxo de e-mail usado para recuperação de senha e ativação de acesso.
+                  </p>
+                </div>
+                <Card className="border-primary/15 bg-primary/5 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-xl bg-primary/10 p-2.5 text-primary"><Mail className="h-5 w-5" /></div>
+                      <div>
+                        <div className="text-sm font-semibold">Teste de entrega</div>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          O teste envia uma mensagem de recuperação para o e-mail do administrador que está conectado.
+                          Se o envio falhar por limite ou SMTP, a mensagem retornará o motivo técnico.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      disabled={!canManage || emailTesting}
+                      onClick={() => {
+                        setEmailTesting(true);
+                        void testAuthEmailAdmin()
+                          .then((result: any) => toast.success(result?.message ?? "E-mail de teste enviado."))
+                          .catch((error: any) => toast.error(error?.message ?? "Não foi possível testar o envio de e-mail."))
+                          .finally(() => setEmailTesting(false));
+                      }}
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      {emailTesting ? "Enviando..." : "Enviar e-mail de teste"}
+                    </Button>
+                  </div>
+                </Card>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card className="p-4">
+                    <div className="text-sm font-semibold">Convites e recuperação</div>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Os convites de novos usuários e links de redefinição passam pelo Supabase Auth e utilizam o endereço de retorno seguro do SuportTech.
+                    </p>
+                  </Card>
+                  <Card className="p-4">
+                    <div className="text-sm font-semibold">SMTP de produção</div>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Para enviar para qualquer endereço, o projeto precisa de um SMTP personalizado configurado no Supabase Auth.
+                    </p>
+                  </Card>
+                </div>
+                {!canManage && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    Apenas administradores ativos podem executar o teste de envio.
+                  </div>
+                )}
               </section>
             )}
 
