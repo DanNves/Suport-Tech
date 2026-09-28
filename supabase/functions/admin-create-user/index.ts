@@ -51,7 +51,21 @@ async function sendViaResend(config: any, input: any) {
       subject: input.subject, html: input.html, text: input.text,
     }),
   });
-  return response.ok;
+
+  if (response.ok) return { ok: true, status: response.status, error: null };
+
+  let detail = "O Resend recusou o envio.";
+  try {
+    const payload = await response.json();
+    if (payload?.message) detail = String(payload.message);
+    else if (payload?.error?.message) detail = String(payload.error.message);
+  } catch {}
+
+  const safeDetail = detail
+    .replaceAll(config.apiKey ?? "", "[REDACTED]")
+    .slice(0, 300);
+
+  return { ok: false, status: response.status, error: safeDetail };
 }
 function inviteEmail(name: string, actionLink: string) {
   const safeName = name.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
@@ -131,8 +145,13 @@ export default {
         : inviteEmail(name, linkData.properties.action_link);
 
       const sent = await sendViaResend(config, { to: [targetEmail], ...mail });
-      if (!sent) {
-        return json({ error: "O Resend recusou o envio do acesso.", code: "EMAIL_PROVIDER_REJECTED" }, 200);
+      if (!sent.ok) {
+        return json({
+          error: "O Resend recusou o envio do acesso.",
+          code: "EMAIL_PROVIDER_REJECTED",
+          provider_status: sent.status,
+          provider_detail: sent.error,
+        }, 200);
       }
 
       await writeAudit(ctx.supabaseAdmin, {
@@ -188,9 +207,14 @@ export default {
 
     const mail = inviteEmail(fullName, invited.properties.action_link);
     const sent = await sendViaResend(config, { to: [email], ...mail });
-    if (!sent) {
+    if (!sent.ok) {
       await ctx.supabaseAdmin.auth.admin.deleteUser(invited.user.id);
-      return json({ error: "O usuário foi revertido porque o Resend recusou o envio do acesso.", code: "EMAIL_PROVIDER_REJECTED" }, 200);
+      return json({
+        error: "O usuário foi revertido porque o Resend recusou o envio do acesso.",
+        code: "EMAIL_PROVIDER_REJECTED",
+        provider_status: sent.status,
+        provider_detail: sent.error,
+      }, 200);
     }
 
     await writeAudit(ctx.supabaseAdmin, { actorId: callerId, action: "user.created", entityType: "user", entityId: invited.user.id, metadata: { email_domain: email.split("@")[1] ?? null, role_key: role.key, department_id: departmentId }});
